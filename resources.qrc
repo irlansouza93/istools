@@ -1,0 +1,7 @@
+<RCC>
+    <qresource prefix="/plugins/istools">
+        <file>icon_istools.png</file>
+        <file>icon_extend_lines.png</file>
+        <file>icon_polygon_generator.png</file>
+    </qresource>
+</RCC>

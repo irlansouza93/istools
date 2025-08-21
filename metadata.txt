@@ -1,0 +1,18 @@
+[general]
+name=ISTools
+qgisMinimumVersion=3.0
+qgisMaximumVersion=3.99
+description=Conjunto de ferramentas de vetorização para QGIS, incluindo extensão de linhas e geração de polígonos.
+about=ISTools (Irlan Souza Tools) é um plugin que reúne ferramentas de vetorização para facilitar operações com vetores no QGIS, como estender linhas soltas e gerar polígonos a partir de delimitadores.
+version=1.0
+author=Irlan Souza, 3° Sgt Brazilian Army
+email=irlansouza193@gmail.com
+repository=https://github.com/seu-usuario/istools
+tracker=https://github.com/seu-usuario/istools/issues
+homepage=https://github.com/seu-usuario/istools
+icon=icon_istools.png
+category=Vector
+tags=vectorization, extend lines, polygon generator, tools
+experimental=False
+deprecated=False
+changelog=1.0: Initial release with ExtendLines and QgisPolygonGenerator tools
