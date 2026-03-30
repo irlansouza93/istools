@@ -1,0 +1,63 @@
+﻿================================================================================
+ÍNDICE DO PROJETO: EDGV - Pipeline ETL Geoespacial
+================================================================================
+
+DESCRIÇÃO DO PROJETO:
+Este projeto implementa uma pipeline ETL (Extract, Transform, Load) inteligente para
+conversão de dados geoespaciais entre formatos Shapefile e PostGIS, seguindo o padrão
+EDGV (Especificação Técnica para a Estruturação de Dados Geoespaciais Vetoriais) do
+Exército Brasileiro (EB). A pipeline usa mapeamento semântico com BERT e lógica fuzzy
+para resolver correspondências entre atributos de diferentes versões do modelo.
+
+MODELOS DE DADOS:
+- EDGV 3.0 (edgv_300): Modelo principal de dados geoespaciais vetoriais
+- EDGV 3.0 Topográfico 1:45.000 (edgv_300_topo_145): Variante topográfica
+
+================================================================================
+ARQUIVOS NESTE PROJETO (carregue todos no NotebookLM):
+================================================================================
+
+📄 arquivo_mapeamento_schema.txt
+   Título: Arquivo de Mapeamento de Schema
+   Tamanho: 9 KB
+
+📄 conversao_pg-edgv-300_pg-edgv-300topo145.txt
+   Título: Dicionário de Conversão: PostGIS EDGV 300 → PostGIS EDGV 300 Topo 145
+   Tamanho: 237 KB
+
+📄 conversao_pg-edgv-300_shp-edgv-300_completo.txt
+   Título: Dicionário de Conversão Completo: PostGIS EDGV 300 → Shapefile EDGV 300
+   Tamanho: 499 KB
+
+📄 edgv_300_edgv_300.txt
+   Título: Schema SQL Completo: EDGV 300 (PostGIS)
+   Tamanho: 823 KB
+
+📄 edgv_300_edgv_300_extension.txt
+   Título: Schema SQL de Extensões: EDGV 300 (PostGIS)
+   Tamanho: 5 KB
+
+📄 edgv_300_master_file_300.txt
+   Título: Arquivo Mestre de Metadados: EDGV 300
+   Tamanho: 433 KB
+
+📄 edgv_300_topo_145_edgv_300_topo_14.txt
+   Título: Schema SQL Completo: EDGV 300 Topográfico 1:45.000 (PostGIS)
+   Tamanho: 251 KB
+
+📄 edgv_300_topo_145_edgv_300_topo_extension_14.txt
+   Título: Schema SQL de Extensões: EDGV 300 Topográfico 1:45.000 (PostGIS)
+   Tamanho: 9 KB
+
+📄 edgv_300_topo_145_master_file_300_topo_14.txt
+   Título: Arquivo Mestre de Metadados: EDGV 300 Topográfico 1:45.000
+   Tamanho: 179 KB
+
+📄 python_caller.txt
+   Título: Script Python Principal (python_caller.py)
+   Tamanho: 17 KB
+
+================================================================================
+Gerado em: 2026-03-17 22:37:46
+Total de arquivos: 10
+================================================================================

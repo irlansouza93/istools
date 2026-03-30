@@ -6,5 +6,13 @@
         <file>icons/icon_bounded_polygon_generator.png</file>
         <file>icons/icon_point_on_surface_generator.png</file>
         <file>icons/icon_intersection_line.png</file>
+        <file>icons/icon_db_manager.png</file>
+        <file>icons/icon_db_tools_menu.png</file>
+        <file>icons/icon_etl_edgv300.png</file>
+        <file>icons/icon_server_config.png</file>
+        <file>icons/carregar_banco_shape.png</file>
+        <file>icons/ferramentas_de_geoprocessamento.png</file>
+        <file>icons/ferramentas_de_vetorizacao.png</file>
+        <file>icons/recortar_por_moldura.png</file>
     </qresource>
 </RCC>

@@ -1,32 +1,35 @@
-.. ISTools documentation master file, created by
-   sphinx-quickstart on Sun Feb 12 17:11:03 2012.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
+ISTools Plugin Documentation
+============================
 
-Welcome to ISTools's documentation!
-============================================
-
-ISTools is a comprehensive QGIS plugin that provides essential geometric tools for GIS professionals. 
-This plugin includes tools for polygon generation, line extension, point placement, and intersection analysis.
-
-Features
---------
-
-* **Polygon Generator**: Create polygons from selected points
-* **Bounded Polygon Generator**: Generate polygons within specified boundaries  
-* **Extend Lines**: Extend line geometries by specified distances
-* **Point on Surface Generator**: Place points on polygon surfaces
-* **Intersection Line**: Find intersections between line geometries
+Welcome to the documentation for **ISTools v1.5.0**, a professional geoinformation toolkit for QGIS.
 
 Contents:
 
 .. toctree::
    :maxdepth: 2
 
-Indices and tables
-==================
+   introduction
+   vectorization
+   database
+   processing
+   troubleshooting
 
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
+Introduction
+------------
+ISTools helps QGIS users automate complex workflows in vectorization, PostGIS database management, and ETL processing for EDGV standards.
 
+Vectorization
+-------------
+- **Extend Lines**: Extend selected line features to boundaries.
+- **Polygon Generator**: Create polygons from line networks instantly.
+- **Bounded Polygon Generator**: Create polygons respecting boundaries.
+- **Point on Surface**: Correct centroid positioning within features.
+
+Database Management
+-------------------
+- **Load Shape Database**: Batch load shapefiles to PostGIS.
+- **PostGIS Manager**: Efficient browsing and management of geospatial schemas.
+
+Processing (ETL)
+----------------
+- **EDGV 3.0 to PostGIS ETL**: Automated data transformation for the Brazilian standards.

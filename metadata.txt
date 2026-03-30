@@ -4,41 +4,25 @@
 [general]
 # Plugin identification
 name=ISTools
-qgisMinimumVersion=3.24.3
+qgisMinimumVersion=3.24
 qgisMaximumVersion=3.99
 
 # Plugin description
-description=🔧 Professional vectorization toolkit for QGIS with enhanced documentation and multilingual support
-about=🚀 **ISTools** (Irlan Souza Tools) is a comprehensive QGIS plugin designed for professional GIS workflows, providing essential vectorization tools to streamline vector operations with enhanced documentation and multilingual support.
+description=Solução de geoinformação completa para QGIS: Vetorização, PostGIS e ETL EDGV 3.0. / Complete Geoinformation suite for QGIS: Vectorization, PostGIS and EDGV 3.0 ETL.
+about=O **ISTools** evoluiu de um conjunto de ferramentas de vetorização para uma **Suíte de Geoinformação completa**. Focado em produtividade máxima, ele integra ferramentas de desenho técnico, gerenciamento de banco de dados e fluxos de processamento inteligentes.
 
-    **🛠️ Core Features:**
-    • **Extend Lines**: Automatically extend loose line endpoints to connect with nearby features using intelligent snapping algorithms
-    • **Polygon Generator**: Create precise polygons from point coordinates with built-in validation and error handling
-    • **Bounded Polygon Generator**: Generate polygons within defined frames using delimiter layers for controlled spatial analysis
-    • **Point on Surface Generator**: Generate representative points within polygon features for labeling and analysis
-    • **Intersection Line**: Insert shared vertices at line intersections within selected areas for precise topology management
+    **🛠️ Ferramentas de Vetorização / Vectorization Tools:**
 
-    **✨ Key Benefits:**
-    • Intuitive user interfaces with modern design principles
-    • Comprehensive error handling and user feedback
-    • Multi-language support (English/Portuguese) with improved translations
-    • Compatible with various coordinate reference systems
-    • Optimized for professional GIS workflows
-    • Cross-platform compatibility (Windows, Linux, macOS)
-    • Complete Sphinx documentation system with HTML generation
-    • Updated project metadata and configuration files
+    **🗄️ Gerenciamento de Dados / Data Management:**
+    • **Gerenciador PostGIS**: Ferramentas avançadas para SQL e manutenção de banco / Advanced SQL and DB maintenance.
+    • **Carregar Banco Shape**: Importação em massa de arquivos SHP diretamente para o banco / Batch SHP to DB import.
+    • **ETL EDGV 3.0**: Pipeline especializado para conversão de dados no padrão EDGV 3.0 para PostGIS / Professional EDGV 3.0 to PostGIS ETL.
 
-    **📚 Documentation:**
-    • Professional Sphinx-based documentation system
-    • HTML documentation generation with modern themes
-    • Comprehensive user guides and API references
-    • Multi-format documentation support (HTML, PDF, ePub)
-
-    **🎯 Perfect for:** Cartographers, GIS analysts, surveyors, urban planners, and geospatial professionals working with vector data processing and geometric operations.
+    **🎯 Ideal para / Perfect for:** Cartógrafos, Analistas GIS, Topógrafos e Administradores de Banco de Dados / Cartographers, GIS analysts, surveyors, and DBAs.
 
 # Version and authorship
-version=1.4.1
-author=Irlan Souza, 3° Sgt Brazilian Army
+version=1.5.0
+author=Irlan Souza, 2° Sgt Brazilian Army
 email=irlansouza193@gmail.com
 
 # Project links
@@ -51,16 +35,24 @@ icon=icons/icon_istools.png
 category=Vector
 
 # Search and discovery
-tags=vectorization,geometry,analysis,polygon,lines,spatial,processing,extend,generator,bounded,surface,intersection,professional,toolkit,cartography,surveying,gis,documentation,sphinx,multilingual,enhanced
+tags=vectorization,geometry,database,postgis,etl,edgv,digitization,analysis,polygon,lines,spatial,processing,extend,generator,bounded,surface,intersection,professional,toolkit,cartography,surveying,gis,documentation,sphinx,multilingual,enhanced
 
 # Plugin characteristics
 experimental=False
 deprecated=False
 server=False
-hasProcessingProvider=False
+hasProcessingProvider=True
 
 # Version history
-changelog=🚀 **Version 1.4.1** (Latest)
+changelog=🚀 **Version 1.5.0** (Lançamento da Suite de Geoinformação)
+    • **Expansão para Suite**: Agora integra gerenciamento PostGIS e ferramentas de ETL EDGV 3.0
+    • **Gerenciador PostGIS**: Interface unificada para manipulação de bancos espaciais
+    • **Importador de Shape**: Nova lógica para carregamento rápido de bases vetoriais
+    • **Melhorias de Core**: Refatoração completa das ferramentas de vetorização original
+    • **Iconografia Estável**: Migração definitiva para o sistema de QResource (:/)
+    • **Refatoração de UI**: Organização das ferramentas em submenus e diálogos modernos
+    
+    🚀 **Version 1.4.1**
     • Enhanced Sphinx documentation system with professional HTML generation
     • Updated project metadata and configuration files for better compatibility
     • Improved multilingual support with refined English and Portuguese translations
@@ -68,34 +60,25 @@ changelog=🚀 **Version 1.4.1** (Latest)
     • Updated copyright information and version consistency across all files
     • Enhanced build system with cross-platform Makefile and batch file support
     • Comprehensive documentation structure with modern Sphinx themes
-    • Updated project information and branding consistency
     
     🚀 **Version 1.4**
     • Added IntersectionLineTool for inserting shared vertices at line intersections
     • Enhanced topology management capabilities
     • Improved rectangle selection interface for intersection processing
-    • Updated documentation with new tool usage instructions
-    • Extended translation support for intersection functionality
     
     📋 **Version 1.3**
     • Complete code refactoring and optimization
     • Enhanced documentation with modern README
     • Full English translation support
-    • Improved user interface design
-    • Better error handling and user feedback
-    • Cross-platform compatibility improvements
     
     🔧 **Version 1.2**
     • Added PointOnSurfaceGenerator tool
     • Enhanced polygon validation algorithms
-    • Improved coordinate system handling
     
     🎉 **Version 1.1**
     • Introduced BoundedPolygonGenerator tool
     • Enhanced line extension algorithms
-    • Added multi-layer support
     
     🎉 **Version 1.0** (Initial Release)
     • Core ExtendLines functionality
     • Basic QgisPolygonGenerator tool
-    • Foundation architecture established

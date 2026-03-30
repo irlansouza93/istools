@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 """
 /***************************************************************************
  ISTools - Polygon Generator
@@ -7,7 +7,7 @@
                               -------------------
         begin                : 2025-01-15
         git sha              : $Format:%H$
-        copyright            : (C) 2025 by Irlan Souza, 3° Sgt Brazilian Army
+        copyright            : (C) 2025 by Irlan Souza, 2° Sgt Brazilian Army
         email                : irlansouza193@gmail.com
  ***************************************************************************/
 

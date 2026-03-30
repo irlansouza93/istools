@@ -7,7 +7,7 @@
                               -------------------
         begin                : 2025-01-15
         git sha              : $Format:%H$
-        copyright            : (C) 2025 by Irlan Souza, 3° Sgt Brazilian Army
+        copyright            : (C) 2025 by Irlan Souza, 2° Sgt Brazilian Army
         email                : irlansouza193@gmail.com
  ***************************************************************************/
 
@@ -25,13 +25,14 @@ import os
 from qgis.PyQt.QtCore import QCoreApplication, QSettings, QTranslator
 from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtWidgets import QAction, QMenu
-from qgis.core import QgsApplication
+from qgis.core import QgsApplication, QgsProcessingRegistry
 from .extend_lines import ExtendLines
 from .polygon_generator import QgisPolygonGenerator
 from .bounded_polygon_generator import BoundedPolygonGenerator
 from .point_on_surface_generator import PointOnSurfaceGenerator
 from .intersection_line import IntersectionLineTool
 from .translations.translate import translate
+from .processing.provider import ISToolsProvider
 
 
 class ISTools:
@@ -65,8 +66,30 @@ class ISTools:
         self.plugin_dir = os.path.dirname(__file__)
         self.translator = None  # Initialize translator attribute
         
-        # Create ISTools submenu for Vector menu
+        # In v1.4.1 we didn't import resources.py, which protected against pyrcc5 compilation bugs.
+        # We rely strictly on the file system paths exactly like 1.4.1 did.
+        
+        # Create ISTools top-level menu
         self.menu = QMenu(self.tr("ISTools", "ISTools"))
+        
+        # Helper for icons
+        def get_icon(path):
+            return QIcon(f":/plugins/istools/icons/{path}")
+            
+        # Create ISTools submenus
+        self.vector_tools_menu = QMenu(self.tr("Ferramentas de Vetorização", "Ferramentas de Vetorização"))
+        self.vector_tools_menu.setIcon(get_icon("ferramentas_de_vetorizacao.png"))
+        
+        self.processing_tools_menu = QMenu(self.tr("Ferramentas de Processamento", "Ferramentas de Processamento"))
+        self.processing_tools_menu.setIcon(get_icon("ferramentas_de_geoprocessamento.png"))
+
+        self.db_tools_menu = QMenu(self.tr("Ferramentas de Banco de Dados", "Ferramentas de Banco de Dados"))
+        self.db_tools_menu.setIcon(QIcon(":/plugins/istools/icons/icon_db_tools_menu.png"))
+        
+        self.menu.addMenu(self.vector_tools_menu)
+        self.menu.addMenu(self.processing_tools_menu)
+        self.menu.addSeparator()
+        self.menu.addMenu(self.db_tools_menu)
         
         # Create ISTools toolbar
         self.toolbar = self.iface.addToolBar("ISTools")
@@ -80,6 +103,7 @@ class ISTools:
         self.bounded_polygon_generator = None
         self.point_on_surface_generator = None
         self.intersection_line_tool = None
+        self.provider = None
 
     def _initialize_translation(self):
         """
@@ -121,77 +145,79 @@ class ISTools:
     def initGui(self):
         """
         Initialize the plugin GUI by creating menu items and toolbar actions.
-        
-        This method sets up all the tools and their corresponding actions,
-        icons, tooltips, and connects them to their respective functions.
         """
-        # Initialize translation system when QGIS is fully loaded
         self._initialize_translation()
         
-        # Initialize and setup Extend Lines tool
+        # Setup tools
         self._setup_extend_lines_tool()
-        
-        # Initialize and setup Polygon Generator tool
         self._setup_polygon_generator_tool()
-        
-        # Initialize and setup Bounded Polygon Generator tool
         self._setup_bounded_polygon_generator_tool()
-        
-        # Initialize and setup Point on Surface Generator tool
         self._setup_point_on_surface_generator_tool()
-        
-        # Initialize and setup Intersection Line tool
         self._setup_intersection_line_tool()
+        self._setup_processing_tools()
+        self._setup_load_shape_database_tool()
+        self._setup_server_config_tool()
+        self._setup_database_manager_tool()
+        self._setup_edgv300_etl_tool()
 
-        # Add ISTools submenu to Vector menu
-        vector_menu = self.iface.vectorMenu()
-        vector_menu.addMenu(self.menu)
+        # Add top-level menu to QGIS
+        menu_bar = self.iface.mainWindow().menuBar()
+        # Inserir antes do menu Ajuda (Geralmente o último)
+        help_menu = self.iface.helpMenu().menuAction()
+        menu_bar.insertMenu(help_menu, self.menu)
+
+        # Initialize and register processing provider
+        self.provider = ISToolsProvider()
+        QgsApplication.processingRegistry().addProvider(self.provider)
+
+    def get_icon(self, path):
+        """
+        Retorna um QIcon de forma híbrida (recurso ou arquivo direto).
+        """
+        # Limpa o caminho de ícones para pegar apenas o nome do arquivo se necessário
+        filename = os.path.basename(path)
+        return QIcon(f":/plugins/istools/icons/{filename}")
 
     def _setup_extend_lines_tool(self):
         """
         Setup the Extend Lines tool with its action, icon, and menu entry.
         """
         self.extend_lines = ExtendLines(self.iface)
-        extend_icon_path = os.path.join(self.plugin_dir, "icons", "icon_extend_lines.png")
         
         extend_action = QAction(
-            QIcon(extend_icon_path),
+            self.get_icon("icon_extend_lines.png"),
             self.tr("Extend Lines", "Estender Linhas"),
             self.iface.mainWindow()
         )
         extend_action.setToolTip(self.tr("Extends loose lines until they touch other lines", "Estende linhas soltas até tocarem outras linhas"))
         extend_action.triggered.connect(self.extend_lines.run)
         
-        self._add_action_to_interface(extend_action)
+        self._add_action_to_interface(extend_action, target_menu=self.vector_tools_menu)
 
     def _setup_polygon_generator_tool(self):
         """
         Setup the Polygon Generator tool with its action, icon, and menu entry.
         """
         self.polygon_generator = QgisPolygonGenerator(self.iface)
-        polygon_icon_path = os.path.join(self.plugin_dir, "icons", "icon_polygon_generator.png")
         
         polygon_action = QAction(
-            QIcon(polygon_icon_path),
+            self.get_icon("icon_polygon_generator.png"),
             self.tr("Polygon Generator", "Gerador de Polígonos"),
             self.iface.mainWindow()
         )
         polygon_action.setToolTip(self.tr("Generates polygons from lines or areas around a point", "Gera polígonos a partir de linhas ou áreas ao redor de um ponto"))
         polygon_action.triggered.connect(self.polygon_generator.activate_tool)
         
-        self._add_action_to_interface(polygon_action)
+        self._add_action_to_interface(polygon_action, target_menu=self.vector_tools_menu)
 
     def _setup_bounded_polygon_generator_tool(self):
         """
         Setup the Bounded Polygon Generator tool with its action, icon, and menu entry.
         """
         self.bounded_polygon_generator = BoundedPolygonGenerator(self.iface)
-        bounded_polygon_icon_path = os.path.join(
-            self.plugin_dir, "icons", "icon_bounded_polygon_generator.png"
-        )
         
         bounded_polygon_action = QAction(
-            QIcon(bounded_polygon_icon_path),
+            self.get_icon("icon_bounded_polygon_generator.png"),
             self.tr("Bounded Polygon Generator", "Gerador de Polígonos Limitados"),
             self.iface.mainWindow()
         )
@@ -202,55 +228,159 @@ class ISTools:
             self.bounded_polygon_generator.activate_tool
         )
         
-        self._add_action_to_interface(bounded_polygon_action)
+        self._add_action_to_interface(bounded_polygon_action, target_menu=self.vector_tools_menu)
 
     def _setup_point_on_surface_generator_tool(self):
         """
         Setup the Point on Surface Generator tool with its action, icon, and menu entry.
         """
         self.point_on_surface_generator = PointOnSurfaceGenerator(self.iface)
-        point_icon_path = os.path.join(
-            self.plugin_dir, "icons", "icon_point_on_surface_generator.png"
-        )
         
         point_action = QAction(
-            QIcon(point_icon_path),
+            self.get_icon("icon_point_on_surface_generator.png"),
             self.tr("Point on Surface Generator", "Gerador de Pontos na Superfície"),
             self.iface.mainWindow()
         )
         point_action.setToolTip(self.tr("Generates points inside selected polygons", "Gera pontos dentro de polígonos selecionados"))
         point_action.triggered.connect(self.point_on_surface_generator.run)
         
-        self._add_action_to_interface(point_action)
+        self._add_action_to_interface(point_action, target_menu=self.vector_tools_menu)
 
     def _setup_intersection_line_tool(self):
         """
         Setup the Intersection Line tool with its action, icon, and menu entry.
         """
         self.intersection_line_tool = IntersectionLineTool(self.iface)
-        intersection_icon_path = os.path.join(
-            self.plugin_dir, "icons", "icon_intersection_line.png"
-        )
         
         intersection_action = QAction(
-            QIcon(intersection_icon_path),
+            self.get_icon("icon_intersection_line.png"),
             self.tr("Intersection Line", "Interseção de Linhas"),
             self.iface.mainWindow()
         )
         intersection_action.setToolTip(self.tr("Insert shared vertices at line intersections within a selected area", "Insere vértices compartilhados nas interseções de linhas dentro de uma área selecionada"))
         intersection_action.triggered.connect(self.intersection_line_tool.activate)
         
-        self._add_action_to_interface(intersection_action)
+        self._add_action_to_interface(intersection_action, target_menu=self.vector_tools_menu)
 
-    def _add_action_to_interface(self, action):
+    def _setup_processing_tools(self):
+        """Setup processing tools menu items."""
+        icon_path = os.path.join(self.plugin_dir, "icons", "recortar_por_moldura.png")
+        action = QAction(
+            QIcon(icon_path),
+            self.tr("Recortar por Moldura", "Recortar por Moldura (Multicamadas)"),
+            self.iface.mainWindow()
+        )
+        action.setToolTip(self.tr("Filtra e recorta múltiplas camadas alvo usando uma moldura", "Filtra e recorta múltiplas camadas alvo usando uma moldura"))
+        action.triggered.connect(self.show_clip_to_frame_dialog)
+        
+        self.actions.append(action)
+        self.processing_tools_menu.addAction(action)
+
+    def show_clip_to_frame_dialog(self):
+        """Displays the Clip by Frame dialog."""
+        from .gui.processing_tools import ClipToFrameDialog
+        dlg = ClipToFrameDialog(self.iface)
+        dlg.exec_()
+
+    def _setup_load_shape_database_tool(self):
+        """Setup para o botão de carregar banco shape."""
+        action = QAction(
+            self.get_icon("carregar_banco_shape.png"),
+            self.tr("Carregar Banco Shape", "Carregar Banco Shape"),
+            self.iface.mainWindow()
+        )
+        action.setToolTip(self.tr(
+            "Carrega shapefiles de uma pasta e organiza no projeto atual",
+            "Carrega shapefiles de uma pasta e organiza no projeto atual"
+        ))
+        action.triggered.connect(self.show_load_shape_database)
+
+        self.actions.append(action)
+        self.db_tools_menu.addAction(action)
+
+    def show_load_shape_database(self):
+        """
+        Exibe o diálogo de Carregar Banco Shape.
+        """
+        from .gui.load_shape_database import LoadShapeDatabaseDialog
+        dlg = LoadShapeDatabaseDialog(self.iface)
+        dlg.exec_()
+
+    def _setup_server_config_tool(self):
+        """Configuração de servidores PostGIS."""
+        action = QAction(
+            self.get_icon("icon_server_config.png"),
+            self.tr("Configurar Servidores", "Configurar Servidores"),
+            self.iface.mainWindow()
+        )
+        action.setToolTip(self.tr("Gerenciar conexões com servidores PostGIS", "Gerenciar conexões com servidores PostGIS"))
+        action.triggered.connect(self.show_server_config)
+        
+        self.actions.append(action)
+        self.db_tools_menu.addAction(action)
+
+    def _setup_database_manager_tool(self):
+        """Gerenciamento de banco (Merge/Reset)."""
+        action = QAction(
+            self.get_icon("icon_db_manager.png"),
+            self.tr("Gerenciador de Banco de Dados", "Gerenciador de Banco de Dados"),
+            self.iface.mainWindow()
+        )
+        action.setToolTip(self.tr("Resetar, Backup, Restaurar e Criar bancos PostGIS", "Resetar, Backup, Restaurar e Criar bancos PostGIS"))
+        action.triggered.connect(self.show_database_manager)
+        
+        self.actions.append(action)
+        self.db_tools_menu.addAction(action)
+
+    def show_database_manager(self):
+        """
+        Exibe o diálogo do Gerenciador de Banco de Dados.
+        """
+        from .gui.database_manager import DatabaseManagerDialog
+        dlg = DatabaseManagerDialog(self.iface)
+        dlg.exec_()
+
+    def show_server_config(self):
+        """
+        Exibe o diálogo de configuração de servidores.
+        """
+        from .gui.server_config import ServerConfigDialog
+        dlg = ServerConfigDialog(self.iface.mainWindow())
+        dlg.exec_()
+
+    def _setup_edgv300_etl_tool(self):
+        """ETL EDGV 3.0."""
+        action = QAction(
+            self.get_icon("icon_etl_edgv300.png"),
+            self.tr("Conversor SHP -> PostGIS (EDGV 3.0 v1.1.6)", "Conversor SHP -> PostGIS (EDGV 3.0 v1.1.6)"),
+            self.iface.mainWindow()
+        )
+        action.setToolTip(self.tr("Importação inteligente de Shapefiles para o padrão EDGV 3.0", "Importação inteligente de Shapefiles para o padrão EDGV 3.0"))
+        action.triggered.connect(self.show_edgv300_etl)
+        
+        self.actions.append(action)
+        self.db_tools_menu.addAction(action)
+
+    def show_edgv300_etl(self):
+        """
+        Executa o algoritmo de ETL EDGV 3.0 via caixa de diálogo do Processing.
+        """
+        import processing
+        processing.execAlgorithmDialog("istools:shp_to_postgis_edgv300")
+
+    def _add_action_to_interface(self, action, target_menu=None):
         """
         Add an action to the plugin menu and toolbar.
         
         Args:
             action: QAction object to be added to the interface
+            target_menu: Optional QMenu to add the action to. If None, adds to self.menu.
         """
         self.actions.append(action)
-        self.menu.addAction(action)
+        if target_menu:
+            target_menu.addAction(action)
+        else:
+            self.menu.addAction(action)
         self.toolbar.addAction(action)
 
     def unload(self):
@@ -260,15 +390,20 @@ class ISTools:
         This method is called when the plugin is unloaded and ensures
         proper cleanup of all GUI elements and tool instances.
         """
+        # Unregister processing provider
+        if self.provider:
+            QgsApplication.processingRegistry().removeProvider(self.provider)
+            self.provider = None
+
         # Remove actions from toolbar and menu
         for action in self.actions:
             self.iface.removeToolBarIcon(action)
             self.toolbar.removeAction(action)
             self.menu.removeAction(action)
             
-        # Remove ISTools submenu from Vector menu
-        vector_menu = self.iface.vectorMenu()
-        vector_menu.removeAction(self.menu.menuAction())
+        # Remove ISTools menu from menu bar
+        menu_bar = self.iface.mainWindow().menuBar()
+        menu_bar.removeAction(self.menu.menuAction())
         
         # Remove ISTools toolbar
         if self.toolbar:
