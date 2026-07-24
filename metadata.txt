@@ -21,7 +21,7 @@ about=O **ISTools** evoluiu de um conjunto de ferramentas de vetorização para 
     **🎯 Ideal para / Perfect for:** Cartógrafos, Analistas GIS, Topógrafos e Administradores de Banco de Dados / Cartographers, GIS analysts, surveyors, and DBAs.
 
 # Version and authorship
-version=1.5.0
+version=1.5.1
 author=Irlan Souza, 2° Sgt Brazilian Army
 email=irlansouza193@gmail.com
 
@@ -44,7 +44,11 @@ server=False
 hasProcessingProvider=True
 
 # Version history
-changelog=🚀 **Version 1.5.0** (Lançamento da Suite de Geoinformação)
+changelog=🚀 **Version 1.5.1**
+    • **Simplificador Suave**: Nova ferramenta para simplificar linhas selecionadas com tolerância fina e operação reversível.
+    • **Interseção de Linhas**: A edição agora é iniciada somente nas camadas que recebem vértices.
+
+    🚀 **Version 1.5.0** (Lançamento da Suite de Geoinformação)
     • **Expansão para Suite**: Agora integra gerenciamento PostGIS e ferramentas de ETL EDGV 3.0
     • **Gerenciador PostGIS**: Interface unificada para manipulação de bancos espaciais
     • **Importador de Shape**: Nova lógica para carregamento rápido de bases vetoriais

@@ -1,8 +1,8 @@
-# Script PowerShell para criar o ZIP do plugin ISTools v1.5.0
+# Script PowerShell para criar o ZIP do plugin ISTools v1.5.1
 # Agora residindo em istools/scripts/ e garantindo a estrutura exigida pelo QGIS
 
 $PLUGINNAME = "istools"
-$VERSION = "1.5.0"
+$VERSION = "1.5.1"
 
 $SCRIPT_DIR = Split-Path -Parent $MyInvocation.MyCommand.Definition
 $ISTOOLS_DIR = Split-Path -Parent $SCRIPT_DIR
@@ -21,13 +21,19 @@ if (Test-Path $OUTPUT_ZIP) { Remove-Item $OUTPUT_ZIP -Force }
 $TEMP_PLUGIN_PATH = Join-Path $TEMP_BASE $PLUGINNAME
 New-Item -ItemType Directory -Path $TEMP_PLUGIN_PATH -Force | Out-Null
 
-Write-Host "Copiando arquivos da suite 1.5.0..." -ForegroundColor Yellow
+Write-Host "Copiando arquivos da suite 1.5.1..." -ForegroundColor Yellow
 
 # Exclusoes (caches, git, etc)
 $exclude = @("*.pyc", "*.pyo", "__pycache__", ".git*", "temp_*", "test_*", "*.zip")
 
 # Copia Recursiva
 Copy-Item -Path "$ISTOOLS_DIR\*" -Destination $TEMP_PLUGIN_PATH -Recurse -Force -Exclude $exclude
+
+# Copy-Item pode preservar diretórios __pycache__ vazios mesmo quando os
+# arquivos .pyc são excluídos. Eles não fazem parte do pacote de runtime.
+Get-ChildItem -Path $TEMP_PLUGIN_PATH -Directory -Recurse -Force |
+    Where-Object { $_.Name -eq "__pycache__" } |
+    Remove-Item -Recurse -Force
 
 # 3. Limpeza pos-copia (remover scripts de build do pacote final)
 Remove-Item -Path "$TEMP_PLUGIN_PATH\scripts\create_zip.ps1" -Force -ErrorAction SilentlyContinue

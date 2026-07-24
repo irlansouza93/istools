@@ -57,7 +57,7 @@ class EDGVETLConverter:
         self.json_path = json_path
         self.feedback = feedback
         
-        with open(self.json_path, 'r', encoding='utf-8') as f:
+        with open(self.json_path, 'r', encoding='utf-8-sig') as f:
             self.mapping_rules = json.load(f)
             
         self.global_attr_mappings = self.mapping_rules.get("mapeamento_atributos", [])

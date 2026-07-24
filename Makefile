@@ -20,7 +20,7 @@ HELP_DIR = help
 TEST_DIR = tests
 
 help:
-	@echo "ISTools Makefile (Versao 1.5.0)"
+	@echo "ISTools Makefile (Versao 1.5.1)"
 	@echo "-------------------------------"
 	@echo "Available commands:"
 	@echo "  make compile    - Compile resources and UI files (using pyrcc5)"

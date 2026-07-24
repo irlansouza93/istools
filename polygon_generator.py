@@ -1,4 +1,4 @@
-﻿# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 """
 /***************************************************************************
  ISTools - Polygon Generator
@@ -30,7 +30,7 @@ from qgis.core import (
     QgsProject, QgsVectorLayer, QgsFeature, QgsGeometry,
     QgsField, QgsMessageLog, Qgis, QgsApplication,
     QgsWkbTypes, QgsPointXY, QgsSymbol, QgsSingleSymbolRenderer,
-    QgsCoordinateReferenceSystem, QgsCoordinateTransform
+    QgsCoordinateReferenceSystem, QgsCoordinateTransform, QgsFeatureRequest
 )
 from qgis.gui import QgsMapToolEmitPoint, QgsVertexMarker
 from .translations.translate import translate
@@ -171,33 +171,31 @@ class QgisPolygonGenerator:
         """
         pt = QgsPointXY(point)
         center_geometry = QgsGeometry.fromPointXY(pt)
-        temp_layer = self._create_temp_layer()
-        features = self._collect_valid_features()
-        
-        if not features:
-            self.iface.messageBar().pushWarning('PolygonGenerator', self.tr('No valid geometry found.', 'Nenhuma geometria válida encontrada.'))
-            self._clear_marker()
-            return
-            
-        # Add features to temporary layer
-        temp_layer.dataProvider().addFeatures(features)
-        temp_layer.updateExtents()
-        
-        # Execute polygonize algorithm
-        polygon_layer = self._execute_polygonize(temp_layer)
-        if not polygon_layer:
-            return
-        
-        # Find polygon containing the clicked point
-        selected_polygon = self._find_containing_polygon(polygon_layer, center_geometry)
+        selected_polygon = None
+
+        # First try only the current canvas extent to reduce processing cost.
+        search_rect = self.canvas.extent()
+        features = self._collect_valid_features(search_rect=search_rect)
+        if features:
+            selected_polygon = self._polygonize_and_find_polygon(features, center_geometry)
+
+        # Fall back to all visible features only if the local search was not enough.
+        if not selected_polygon:
+            features = self._collect_valid_features()
+            if not features:
+                self.iface.messageBar().pushWarning('PolygonGenerator', self.tr('No valid geometry found.', 'Nenhuma geometria válida encontrada.'))
+                self._clear_marker()
+                return
+            selected_polygon = self._polygonize_and_find_polygon(features, center_geometry)
+
         if not selected_polygon:
             self.iface.messageBar().pushWarning('PolygonGenerator', self.tr('No valid polygon found.', 'Nenhum polígono válido encontrado.'))
             self._clear_marker()
             return
-        
+
         # Add polygon to output layer
         self._add_polygon_to_output_layer(selected_polygon)
-    
+
     def _create_temp_layer(self):
         """
         Create a temporary memory layer for processing.
@@ -212,7 +210,46 @@ class QgisPolygonGenerator:
             "memory"
         )
     
-    def _collect_valid_features(self):
+    def _polygonize_and_find_polygon(self, features, center_geometry):
+        """
+        Polygonize the provided features and return the polygon containing the point.
+        """
+        temp_layer = self._create_temp_layer()
+        temp_layer.dataProvider().addFeatures(features)
+        temp_layer.updateExtents()
+
+        polygon_layer = self._execute_polygonize(temp_layer)
+        if not polygon_layer:
+            return None
+
+        return self._find_containing_polygon(polygon_layer, center_geometry)
+
+    def _build_feature_request(self, layer, search_rect):
+        """
+        Build a spatially filtered request using the layer CRS when possible.
+        """
+        request = QgsFeatureRequest()
+        if search_rect is None or search_rect.isEmpty():
+            return request
+
+        layer_rect = search_rect
+        canvas_crs = self.canvas.mapSettings().destinationCrs()
+        layer_crs = layer.crs()
+        if layer_crs.isValid() and canvas_crs.isValid() and layer_crs != canvas_crs:
+            try:
+                transform = QgsCoordinateTransform(
+                    canvas_crs,
+                    layer_crs,
+                    QgsProject.instance().transformContext()
+                )
+                layer_rect = transform.transformBoundingBox(search_rect)
+            except Exception:
+                return request
+
+        request.setFilterRect(layer_rect)
+        return request
+
+    def _collect_valid_features(self, search_rect=None):
         """
         Collect all valid features from visible layers.
         
@@ -233,15 +270,17 @@ class QgisPolygonGenerator:
             geometry_type = QgsWkbTypes.geometryType(layer.wkbType())
             if geometry_type not in [QgsWkbTypes.LineGeometry, QgsWkbTypes.PolygonGeometry]:
                 continue
+
+            request = self._build_feature_request(layer, search_rect)
             
-            for feature in layer.getFeatures():
+            for feature in layer.getFeatures(request):
                 geometry = feature.geometry()
-                if not geometry.isGeosValid() or geometry.isEmpty():
+                if geometry.isEmpty() or not geometry.isGeosValid():
                     continue
                 
                 new_feature = QgsFeature()
                 
-                # Convert polygon boundaries to lines
+                # Convert polygon boundaries to lines.
                 if geometry_type == QgsWkbTypes.PolygonGeometry:
                     boundaries = geometry.convertToType(QgsWkbTypes.LineGeometry, True)
                     if boundaries and not boundaries.isEmpty():
@@ -252,7 +291,7 @@ class QgisPolygonGenerator:
                     features.append(new_feature)
         
         return features
-    
+
     def _execute_polygonize(self, temp_layer):
         """
         Execute the QGIS polygonize algorithm.
@@ -263,21 +302,27 @@ class QgisPolygonGenerator:
         Returns:
             QgsVectorLayer or None: Resulting polygon layer or None if failed
         """
-        try:
-            result = processing.run(
-                'qgis:polygonize',
-                {'INPUT': temp_layer, 'KEEP_FIELDS': False, 'OUTPUT': 'memory:'}
-            )
-            return result['OUTPUT']
-        except Exception as e:
-            QMessageBox.critical(
-                None, 
-                self.tr("Error", "Erro"), 
-                self.tr(f'Error executing polygonize: {str(e)}', f'Erro ao executar poligonização: {str(e)}')
-            )
-            self._clear_marker()
-            return None
-    
+        algorithms = [
+            ('native:polygonize', {'INPUT': temp_layer, 'OUTPUT': 'memory:'}),
+            ('qgis:polygonize', {'INPUT': temp_layer, 'KEEP_FIELDS': False, 'OUTPUT': 'memory:'})
+        ]
+
+        last_error = None
+        for algorithm_id, params in algorithms:
+            try:
+                result = processing.run(algorithm_id, params)
+                return result['OUTPUT']
+            except Exception as e:
+                last_error = e
+
+        QMessageBox.critical(
+            None,
+            self.tr("Error", "Erro"),
+            self.tr(f'Error executing polygonize: {str(last_error)}', f'Erro ao executar poligonização: {str(last_error)}')
+        )
+        self._clear_marker()
+        return None
+
     def _find_containing_polygon(self, polygon_layer, center_geometry):
         """
         Find the polygon that contains the center point.
@@ -289,12 +334,13 @@ class QgisPolygonGenerator:
         Returns:
             QgsGeometry or None: The containing polygon geometry
         """
-        for feature in polygon_layer.getFeatures():
+        request = QgsFeatureRequest().setFilterRect(center_geometry.boundingBox())
+        for feature in polygon_layer.getFeatures(request):
             geometry = feature.geometry()
-            if geometry.contains(center_geometry) and geometry.isGeosValid():
+            if geometry.isGeosValid() and geometry.contains(center_geometry):
                 return geometry
         return None
-    
+
     def _add_polygon_to_output_layer(self, polygon_geometry):
         """
         Add the generated polygon to the output layer.
@@ -421,11 +467,12 @@ class QgisPolygonGenerator:
         Returns:
             bool: True if polygon exists, False otherwise
         """
-        for feature in layer.getFeatures():
+        request = QgsFeatureRequest().setFilterRect(geometry.boundingBox())
+        for feature in layer.getFeatures(request):
             if feature.geometry().equals(geometry):
                 return True
         return False
-    
+
     def _create_polygon_feature(self, layer, geometry):
         """
         Create a new polygon feature with calculated attributes.

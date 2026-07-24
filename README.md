@@ -15,7 +15,7 @@
 </div>
 
 [![Versão QGIS](https://img.shields.io/badge/QGIS-3.10+-brightgreen.svg)](https://qgis.org)
-[![Versão](https://img.shields.io/badge/Versão-1.5.0-blue.svg)](https://github.com/irlansouza93/istools)
+[![Versão](https://img.shields.io/badge/Versão-1.5.1-blue.svg)](https://github.com/irlansouza93/istools)
 [![Licença](https://img.shields.io/badge/Licença-GPL--3.0-red.svg)](LICENSE)
 [![Linguagem](https://img.shields.io/badge/Linguagem-Python-yellow.svg)](https://python.org)
 
@@ -41,6 +41,7 @@ Ferramentas ágeis para manipulação de geometrias:
 - **📐 Gerador de Polígonos**: Cria áreas a partir de nuvens de pontos com validação rigorosa.
 - **📍 Ponto na Superfície**: Garante a criação de centroides representativos dentro de polígonos complexos.
 - **✂️ Interseção de Linhas**: Automatiza a criação de vértices em cruzamentos para manter a topologia íntegra.
+- **Simplificador Suave**: Reduz vértices de linhas selecionadas com tolerância fina e operação reversível (Ctrl+Z).
 
 ### 🗄️ Gerenciamento de Banco de Dados (PostGIS)
 - **⚡ Gerenciador PostGIS**: Interface unificada para execução rápida de comandos SQL, manutenção de tabelas e análise espacial direta.

@@ -20,7 +20,9 @@
  *                                                                         *
  ***************************************************************************/
 """
+from pathlib import Path
 import psycopg2
+from qgis.PyQt.QtCore import QSettings
 from qgis.core import QgsMessageLog, Qgis
 
 
@@ -52,6 +54,168 @@ def list_databases(params):
     cur.close()
     conn.close()
     return dbs
+
+
+
+def get_configured_servers():
+    """Retorna os nomes dos servidores PostgreSQL salvos no QgsSettings."""
+    settings = QSettings()
+    settings.beginGroup("PostgreSQL/servers")
+    servers = settings.childGroups()
+    settings.endGroup()
+    return servers
+
+
+def get_server_info(conn_name):
+    """L? informa??es de um servidor salvo no QgsSettings."""
+    settings = QSettings()
+    settings.beginGroup(f"PostgreSQL/servers/{conn_name}")
+    data = {
+        "name": conn_name,
+        "host": settings.value("host", ""),
+        "port": str(settings.value("port", "5432")),
+        "user": settings.value("username", ""),
+        "password": settings.value("password", ""),
+        "authcfg": settings.value("authcfg", ""),
+        "databases": settings.value("databases", ""),
+    }
+    settings.endGroup()
+    return data
+
+
+def get_server_connection_params(conn_name, db_name=None):
+    """Monta par?metros de conex?o psycopg2/QGIS a partir do QgsSettings."""
+    data = get_server_info(conn_name)
+    if not data["host"] or not data["user"]:
+        raise ValueError(f"Configura??o incompleta para o servidor: {conn_name}")
+
+    params = {
+        "host": data["host"],
+        "port": data["port"],
+        "user": data["user"],
+        "password": data["password"],
+    }
+    if data.get("authcfg"):
+        params["authcfg"] = data["authcfg"]
+    if db_name:
+        params["dbname"] = db_name
+    return params
+
+
+def save_server_databases(conn_name, databases):
+    """Persiste a lista de bancos encontrada para um servidor."""
+    settings = QSettings()
+    settings.beginGroup(f"PostgreSQL/servers/{conn_name}")
+    settings.setValue("databases", ",".join(databases))
+    settings.endGroup()
+
+
+
+def refresh_server_databases(conn_name):
+    """Atualiza a lista de bancos de um servidor usando conex?o real."""
+    params = get_server_connection_params(conn_name)
+    databases = list_databases(params)
+    save_server_databases(conn_name, databases)
+    return databases
+
+
+
+def get_server_databases(conn_name, refresh_if_missing=True):
+    """Retorna os bancos salvos para um servidor, atualizando se necess?rio."""
+    if not conn_name:
+        return []
+    data = get_server_info(conn_name)
+    raw = data.get("databases") or ""
+    databases = [db.strip() for db in raw.split(",") if db.strip()]
+    if databases:
+        return databases
+    if refresh_if_missing:
+        return refresh_server_databases(conn_name)
+    return []
+
+
+
+def database_exists(params, db_name):
+    """Verifica se um banco existe no servidor."""
+    conn = get_db_connection(params, "postgres")
+    cur = conn.cursor()
+    cur.execute("SELECT 1 FROM pg_database WHERE datname = %s", (db_name,))
+    exists = cur.fetchone() is not None
+    cur.close()
+    conn.close()
+    return exists
+
+
+
+def create_database(params, db_name, allow_existing=False):
+    """Cria um novo banco no servidor."""
+    conn = get_db_connection(params, "postgres")
+    conn.autocommit = True
+    cur = conn.cursor()
+    cur.execute("SELECT 1 FROM pg_database WHERE datname = %s", (db_name,))
+    exists = cur.fetchone() is not None
+    if exists and not allow_existing:
+        cur.close()
+        conn.close()
+        raise ValueError(f"O banco '{db_name}' j? existe.")
+    if not exists:
+        cur.execute(f'CREATE DATABASE "{db_name}"')
+    cur.close()
+    conn.close()
+
+
+
+def drop_database(params, db_name, if_exists=True):
+    """Exclui banco no servidor encerrando sess?es antes."""
+    terminate_db_sessions(params, db_name)
+    conn = get_db_connection(params, "postgres")
+    conn.autocommit = True
+    cur = conn.cursor()
+    if if_exists:
+        cur.execute(f'DROP DATABASE IF EXISTS "{db_name}"')
+    else:
+        cur.execute(f'DROP DATABASE "{db_name}"')
+    cur.close()
+    conn.close()
+
+
+
+def execute_sql_file(params, db_name, sql_path):
+    """Executa um arquivo SQL em um banco usando psycopg2."""
+    sql_text = Path(sql_path).read_text(encoding='utf-8-sig')
+    conn = get_db_connection(params, db_name)
+    conn.autocommit = True
+    cur = conn.cursor()
+    cur.execute(sql_text)
+    cur.close()
+    conn.close()
+
+
+
+def get_topo_sql_script_paths(base_dir=None):
+    """Retorna os scripts SQL oficiais de cria??o do banco Topo 1.4.5."""
+    if base_dir is None:
+        base_dir = Path(__file__).resolve().parent / 'scripts' / 'sql_creator_database_edgv'
+    else:
+        base_dir = Path(base_dir)
+    return [
+        str(base_dir / 'edgv_300_topo_14.sql'),
+        str(base_dir / 'edgv_300_topo_extension_14.sql'),
+    ]
+
+
+
+def create_topo_database(conn_name, db_name, allow_existing=False):
+    """Cria um banco EDGV 3.0 Topo 1.4.5 a partir dos scripts oficiais."""
+    params = get_server_connection_params(conn_name)
+    create_database(params, db_name, allow_existing=allow_existing)
+    for sql_path in get_topo_sql_script_paths():
+        execute_sql_file(params, db_name, sql_path)
+    try:
+        refresh_server_databases(conn_name)
+    except Exception:
+        pass
+    return get_server_connection_params(conn_name, db_name)
 
 
 # ========================================================================

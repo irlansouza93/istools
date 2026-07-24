@@ -39,14 +39,12 @@ class ServerConfigDialog(QDialog):
         self.remove_btn = QPushButton("Remover")
         self.edit_btn = QPushButton("Editar")
         self.test_btn = QPushButton("Teste")
-        self.fetch_db_btn = QPushButton("Buscar Bancos")
         self.close_btn = QPushButton("Fechar")
         
         btn_layout.addWidget(self.add_btn)
         btn_layout.addWidget(self.remove_btn)
         btn_layout.addWidget(self.edit_btn)
         btn_layout.addWidget(self.test_btn)
-        btn_layout.addWidget(self.fetch_db_btn)
         btn_layout.addStretch()
         btn_layout.addWidget(self.close_btn)
         
@@ -57,7 +55,6 @@ class ServerConfigDialog(QDialog):
         self.remove_btn.clicked.connect(self.remove_server)
         self.edit_btn.clicked.connect(self.edit_server)
         self.test_btn.clicked.connect(self.test_connection)
-        self.fetch_db_btn.clicked.connect(self.fetch_databases)
         self.close_btn.clicked.connect(self.close)
         self.table.doubleClicked.connect(self.edit_server)
         

@@ -15,7 +15,7 @@
 </div>
 
 [![QGIS Version](https://img.shields.io/badge/QGIS-3.10+-brightgreen.svg)](https://qgis.org)
-[![Version](https://img.shields.io/badge/Version-1.5.0-blue.svg)](https://github.com/irlansouza93/istools)
+[![Version](https://img.shields.io/badge/Version-1.5.1-blue.svg)](https://github.com/irlansouza93/istools)
 [![License](https://img.shields.io/badge/License-GPL--3.0-red.svg)](LICENSE)
 [![Language](https://img.shields.io/badge/Language-Python-yellow.svg)](https://python.org)
 
@@ -41,6 +41,7 @@ Fast tools for geometry manipulation:
 - **📐 Polygon Generator**: Create polygon areas from point clouds with rigorous validation.
 - **📍 Point on Surface**: Ensure representative centroids are created inside complex polygons.
 - **✂️ Intersection Line**: Automatically create vertices at crossings to maintain topological integrity.
+- **Smooth Simplifier**: Reduce vertices in selected lines using a fine, undoable tolerance (Ctrl+Z).
 
 ### 🗄️ Database Management (PostGIS)
 - **⚡ PostGIS Manager**: Unified interface for fast SQL execution, table maintenance, and direct spatial analysis.

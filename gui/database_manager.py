@@ -766,7 +766,7 @@ class DatabaseManagerDialog(QDialog):
         help_text = QTextEdit()
         help_text.setReadOnly(True)
         help_text.setHtml("""
-            <h3>Guia do Gerenciador de Banco — ISTools v1.5.0</h3>
+            <h3>Guia do Gerenciador de Banco — ISTools v1.5.1</h3>
             <p>Ferramenta para administração de bancos PostGIS com foco em projetos de Geoinformação.</p>
 
             <hr>

@@ -250,29 +250,43 @@ class IntersectionLineTool:
         node = self.project.layerTreeRoot().findLayer(layer.id())
         return bool(node and node.isVisible())
 
+    def _ensure_edit_command(self, info):
+        """Start editing a layer only when it is about to receive a vertex."""
+        layer = info['layer']
+        if not layer.isEditable() and not layer.startEditing():
+            return False
+
+        if not info['command_started']:
+            layer.beginEditCommand(self.tr(
+                "Insert vertices at intersections (rectangle)",
+                "Inserir vértices em interseções (retângulo)"
+            ))
+            info['command_started'] = True
+        return True
+
     # -------------------- core processing --------------------
     def _process_rect(self, rect_proj: QgsRectangle):
         """
         Process all intersections within the rectangle (project CRS),
-        across **visible** line layers only; keep layers in edit mode.
+        across visible line layers. Only layers that receive a vertex enter edit mode.
         Emits the required single-line messages only.
         """
         tol_proj = self._map_tol(px=2)
 
-        # 1) Collect visible & editable line layers + spatial indexes + transforms
+        # 1) Collect visible line layers + spatial indexes + transforms. Editing is
+        # deferred until a vertex is actually going to be inserted in that layer.
         line_layers = []
         for lyr in self.project.mapLayers().values():
             if (getattr(lyr, 'geometryType', None)
                 and lyr.geometryType() == QgsWkbTypes.LineGeometry
                 and lyr.isValid()
                 and self._layer_is_visible(lyr)):
-                if not lyr.isEditable() and not lyr.startEditing():
-                    continue  # silently skip non-editable layers
                 index = QgsSpatialIndex(lyr.getFeatures())
                 to_proj, from_proj = self._layer_transforms(lyr)
                 line_layers.append({
                     'layer': lyr, 'index': index,
-                    'to_proj': to_proj, 'from_proj': from_proj
+                    'to_proj': to_proj, 'from_proj': from_proj,
+                    'command_started': False
                 })
 
         if not line_layers:
@@ -294,15 +308,10 @@ class IntersectionLineTool:
                              if f.geometry() and f.geometry().isGeosValid()}
             info['tol_layer'] = self._tol_in_layer_units(info['from_proj'], tol_proj, ref_pt_proj)
 
-        # 3) Single undo step per layer
-        for info in line_layers:
-            info['layer'].beginEditCommand(self.tr("Insert vertices at intersections (rectangle)",
-                                                   "Inserir vértices em interseções (retângulo)"))
-
         created_count = 0
         had_any_intersection = False
 
-        # 4) Iterate pairs of layers (including same-layer) and create shared vertices
+        # 3) Iterate pairs of layers (including same-layer) and create shared vertices
         for i, A in enumerate(line_layers):
             lyrA, featsA, toA, fromA, tolA = A['layer'], A['feats'], A['to_proj'], A['from_proj'], A['tol_layer']
             for j in range(i, len(line_layers)):
@@ -361,8 +370,7 @@ class IntersectionLineTool:
                             except Exception:
                                 pass
                             newA = self._insert_vertex_precisely(gA_layer, ptA, tolA)
-                            if newA:
-                                lyrA.changeGeometry(fidA, newA)
+                            if newA and self._ensure_edit_command(A) and lyrA.changeGeometry(fidA, newA):
                                 gA_layer = newA
                                 created_count += 1
 
@@ -373,18 +381,18 @@ class IntersectionLineTool:
                             except Exception:
                                 pass
                             newB = self._insert_vertex_precisely(gB_layer, ptB, tolB)
-                            if newB:
-                                lyrB.changeGeometry(fidB, newB)
+                            if newB and self._ensure_edit_command(B) and lyrB.changeGeometry(fidB, newB):
                                 gB_layer = newB
                                 created_count += 1
 
-        # 5) Close undo step for each layer (keep edit mode open; no commit)
+        # 4) Close undo steps only for layers modified by this operation.
         for info in line_layers:
-            info['layer'].endEditCommand()
+            if info['command_started']:
+                info['layer'].endEditCommand()
 
         self.canvas.refreshAllLayers()
 
-        # 6) Required single-line messages
+        # 5) Required single-line messages
         if created_count == 0:
             if had_any_intersection:
                 # intersections existed, but were already shared (nothing new created)

@@ -29,7 +29,7 @@ from .edgv_etl_topo_algorithm import EDGVETLTopoAlgorithm
 from .shp_to_postgis_algorithm import ShpToPostGISAlgorithm
 from .postgis_to_shp_algorithm import PostGISToShpAlgorithm
 from .clip_by_frame_algorithm import ClipByFrameAlgorithm
-
+from .fill_polygon_generator_algorithm import FillPolygonGeneratorAlgorithm
 
 from .edgv_300_shp_to_postgis_algorithm import EDGV300ShpToPostgisAlgorithm
 
@@ -49,6 +49,7 @@ class ISToolsProvider(QgsProcessingProvider):
         self.addAlgorithm(ShpToPostGISAlgorithm())
         self.addAlgorithm(PostGISToShpAlgorithm())
         self.addAlgorithm(ClipByFrameAlgorithm())
+        self.addAlgorithm(FillPolygonGeneratorAlgorithm())
         self.addAlgorithm(EDGVETLTopoAlgorithm())
         self.addAlgorithm(EDGV300ShpToPostgisAlgorithm())
 

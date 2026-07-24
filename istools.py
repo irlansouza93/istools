@@ -31,6 +31,7 @@ from .polygon_generator import QgisPolygonGenerator
 from .bounded_polygon_generator import BoundedPolygonGenerator
 from .point_on_surface_generator import PointOnSurfaceGenerator
 from .intersection_line import IntersectionLineTool
+from .smooth_simplifier import SmoothSimplifier
 from .translations.translate import translate
 from .processing.provider import ISToolsProvider
 
@@ -103,6 +104,7 @@ class ISTools:
         self.bounded_polygon_generator = None
         self.point_on_surface_generator = None
         self.intersection_line_tool = None
+        self.smooth_simplifier = None
         self.provider = None
 
     def _initialize_translation(self):
@@ -154,6 +156,7 @@ class ISTools:
         self._setup_bounded_polygon_generator_tool()
         self._setup_point_on_surface_generator_tool()
         self._setup_intersection_line_tool()
+        self._setup_smooth_simplifier_tool()
         self._setup_processing_tools()
         self._setup_load_shape_database_tool()
         self._setup_server_config_tool()
@@ -261,6 +264,23 @@ class ISTools:
         intersection_action.triggered.connect(self.intersection_line_tool.activate)
         
         self._add_action_to_interface(intersection_action, target_menu=self.vector_tools_menu)
+
+    def _setup_smooth_simplifier_tool(self):
+        """Configura a simplificação suave de linhas selecionadas."""
+        self.smooth_simplifier = SmoothSimplifier(self.iface)
+
+        simplifier_action = QAction(
+            QIcon(os.path.join(self.plugin_dir, "icons", "icon_smooth_simplifier.png")),
+            self.tr("Smooth Simplifier", "Simplificador Suave"),
+            self.iface.mainWindow()
+        )
+        simplifier_action.setToolTip(self.tr(
+            "Simplifies selected lines with a fine, undoable tolerance",
+            "Simplifica linhas selecionadas com tolerância fina e reversível"
+        ))
+        simplifier_action.triggered.connect(self.smooth_simplifier.run)
+
+        self._add_action_to_interface(simplifier_action, target_menu=self.vector_tools_menu)
 
     def _setup_processing_tools(self):
         """Setup processing tools menu items."""
@@ -443,3 +463,7 @@ class ISTools:
         if self.intersection_line_tool:
             self.intersection_line_tool.deactivate()
             self.intersection_line_tool = None
+
+        if self.smooth_simplifier:
+            self.smooth_simplifier.unload()
+            self.smooth_simplifier = None
