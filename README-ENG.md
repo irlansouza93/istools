@@ -15,7 +15,7 @@
 </div>
 
 [![QGIS Version](https://img.shields.io/badge/QGIS-3.10+-brightgreen.svg)](https://qgis.org)
-[![Version](https://img.shields.io/badge/Version-1.5.1-blue.svg)](https://github.com/irlansouza93/istools)
+[![Version](https://img.shields.io/badge/Version-1.5.3-blue.svg)](https://github.com/irlansouza93/istools)
 [![License](https://img.shields.io/badge/License-GPL--3.0-red.svg)](LICENSE)
 [![Language](https://img.shields.io/badge/Language-Python-yellow.svg)](https://python.org)
 
@@ -49,6 +49,9 @@ Fast tools for geometry manipulation:
 
 ### ⚡ Processing Pipelines (ETL)
 - **🏗️ EDGV 3.0 ETL**: Specialized module to convert legacy data to the EDGV 3.0 standard (Brazilian Army Geospatial Vector Data Specification).
+
+### 🛰️ External applications
+- **[TiffTools Pro](https://irlansouza93.github.io/istools-website/tifftools/)**: Standalone Windows application for compressing and reprojecting TIFF files with the GDAL tools installed by QGIS. It is intended to make very large imagery easier to handle, including on computers with limited memory. The executable is not bundled with the plugin; ISTools only provides a shortcut to its official download and user guide.
 
 ---
 

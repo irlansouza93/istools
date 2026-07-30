@@ -22,7 +22,8 @@
 """
 
 import os
-import subprocess
+# Necessário para pg_dump; toda chamada passa por validate_postgres_command.
+import subprocess  # nosec B404
 from datetime import datetime
 from typing import Any, Optional
 
@@ -45,6 +46,7 @@ from processing.gui.wrappers import WidgetWrapper
 
 from ..converter_logic import EDGVETLConverter
 from .. import database_manager_logic as logic
+from ..subprocess_security import validate_postgres_command  # nosec B404
 
 
 _WIDGET_SELECTION_CACHE = {}
@@ -446,23 +448,28 @@ class EDGVETLTopoAlgorithm(QgsProcessingAlgorithm):
         env = os.environ.copy()
         if params.get("password"):
             env["PGPASSWORD"] = params["password"]
-        cmd = [
-            self._get_pg_dump_executable(),
-            "-h", params["host"],
-            "-p", str(params["port"]),
-            "-U", params["user"],
-            "-f", output_sql,
-            db_name,
-        ]
+        try:
+            cmd = validate_postgres_command([
+                self._get_pg_dump_executable(),
+                "-h", params["host"],
+                "-p", str(params["port"]),
+                "-U", params["user"],
+                "-f", output_sql,
+                db_name,
+            ])
+        except ValueError as error:
+            raise QgsProcessingException(self.tr(str(error))) from error
         kwargs = {
             "env": env,
             "capture_output": True,
             "text": True,
             "check": False,
+            "shell": False,
+            "stdin": subprocess.DEVNULL,
         }
         if os.name == "nt":
             kwargs["creationflags"] = subprocess.CREATE_NO_WINDOW
-        result = subprocess.run(cmd, **kwargs)
+        result = subprocess.run(cmd, **kwargs)  # nosec B603
         if result.returncode != 0:
             error = result.stderr.strip() or result.stdout.strip() or "pg_dump falhou sem mensagem detalhada."
             raise QgsProcessingException(self.tr(f"Falha ao gerar SQL via pg_dump: {error}"))

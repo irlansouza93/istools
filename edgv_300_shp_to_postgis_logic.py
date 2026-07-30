@@ -277,6 +277,11 @@ class SqlScriptWriter:
         val_str = val_str.replace("'", "''")
         return f"'{val_str}'"
 
+    @staticmethod
+    def _quote_identifier(identifier: str) -> str:
+        """Escapa um identificador PostgreSQL para o arquivo SQL exportado."""
+        return '"' + str(identifier).replace('"', '""') + '"'
+
     def write_inserts(self, records: List[PostGISRecord]):
         if not records:
             return
@@ -287,18 +292,29 @@ class SqlScriptWriter:
                 values = []
                 
                 for col_name, val in record.attributes.items():
-                    columns.append(f'"{col_name}"')
+                    columns.append(self._quote_identifier(col_name))
                     values.append(self._format_value(val, "unknown"))
                 
                 if record.wkt_geometry:
-                    columns.append('"geom"')
-                    values.append(f"ST_GeomFromText('{record.wkt_geometry}', 4674)")
+                    columns.append(self._quote_identifier("geom"))
+                    geometry = self._format_value(record.wkt_geometry, "text")
+                    values.append("ST_GeomFromText(" + geometry + ", 4674)")
                 
                 cols_str = ", ".join(columns)
                 vals_str = ", ".join(values)
                 
-                sql = f'INSERT INTO "{self.schema_name}"."{record.table_name}" ({cols_str}) VALUES ({vals_str});\n'
-                f.write(sql)
+                statement = (
+                    "INSERT INTO "  # nosec B608
+                    + self._quote_identifier(self.schema_name)
+                    + "."
+                    + self._quote_identifier(record.table_name)
+                    + " ("
+                    + cols_str
+                    + ") VALUES ("
+                    + vals_str
+                    + ");\n"
+                )
+                f.write(statement)
                 
     def close(self):
         with open(self.output_filepath, 'a', encoding='utf-8') as f:
@@ -309,6 +325,8 @@ class PostGISBatchWriter:
     """ Escritor para inserção direta no PostGIS via psycopg2. """
     def __init__(self, connection_params: dict, db_name: str, schema_name: str = "edgv"):
         import psycopg2
+        from psycopg2 import sql
+        self.sql = sql
         self.conn_params = connection_params.copy()
         self.db_name = db_name
         self.schema_name = schema_name
@@ -340,30 +358,33 @@ class PostGISBatchWriter:
             values = []
             
             for col_name, val in record.attributes.items():
-                columns.append(f'"{col_name}"')
+                columns.append(col_name)
                 if self._is_null(val):
                     values.append(None)
                 else:
                     values.append(val)
             
             if record.wkt_geometry:
-                columns.append('"geom"')
-                # Geometria via ST_GeomFromText com placeholder %s
-                query_geom = f"ST_GeomFromText(%s, 4674)"
+                columns.append("geom")
+                query_geom = self.sql.SQL("ST_GeomFromText({}, 4674)").format(
+                    self.sql.Placeholder()
+                )
             else:
                 query_geom = None
 
-            cols_str = ", ".join(columns)
-            placeholders = ["%s"] * len(values)
+            placeholders = [self.sql.Placeholder()] * len(values)
             if query_geom:
                 placeholders.append(query_geom)
                 values.append(record.wkt_geometry)
-                
-            placeholders_str = ", ".join(placeholders)
-            
-            sql = f'INSERT INTO "{self.schema_name}"."{record.table_name}" ({cols_str}) VALUES ({placeholders_str})'
+
+            query = self.sql.SQL("INSERT INTO {}.{} ({}) VALUES ({})").format(
+                self.sql.Identifier(self.schema_name),
+                self.sql.Identifier(record.table_name),
+                self.sql.SQL(", ").join(map(self.sql.Identifier, columns)),
+                self.sql.SQL(", ").join(placeholders),
+            )
             try:
-                self.cur.execute(sql, tuple(values))
+                self.cur.execute(query, tuple(values))
             except Exception as e:
                 self.conn.rollback()
                 raise e

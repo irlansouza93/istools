@@ -1,5 +1,7 @@
 ﻿import psycopg2
+import os
 import sys
+from psycopg2 import sql
 
 # ATENÇÃO: ESTE SCRIPT APAGA APENAS OS REGISTROS DAS TABELAS DO BANCO DE DESTINO
 # ELE PRESERVA O SCHEMA, OS CAMPOS, AS RESTRIÇÕES E OS DOMÍNIOS.
@@ -10,10 +12,16 @@ def reset_banco_destino():
     print("==================================================")
     
     # Parâmetros de proteção garantem que APENAS o banco-destino seja tocado
-    db_name = 'banco-destino'
+    db_name = os.environ.get("ISTOOLS_TARGET_DB", "banco-destino")
     
     try:
-        conn = psycopg2.connect(dbname=db_name, user='postgres', password='postgres', host='localhost')
+        conn = psycopg2.connect(
+            dbname=db_name,
+            user=os.environ.get("PGUSER", "postgres"),
+            password=os.environ.get("PGPASSWORD", ""),
+            host=os.environ.get("PGHOST", "localhost"),
+            port=os.environ.get("PGPORT", "5432"),
+        )
         conn.autocommit = True  # Para poder rodar o TRUNCATE rapidamente
         cur = conn.cursor()
         
@@ -22,7 +30,10 @@ def reset_banco_destino():
         schema_name = "edgv"
         
         # Pega todas as tabelas fisicas relativas ao schema edgv:
-        cur.execute(f"SELECT tablename FROM pg_tables WHERE schemaname = '{schema_name}'")
+        cur.execute(
+            "SELECT tablename FROM pg_tables WHERE schemaname = %s",
+            (schema_name,),
+        )
         tabelas = [row[0] for row in cur.fetchall()]
         
         if not tabelas:
@@ -33,9 +44,17 @@ def reset_banco_destino():
         
         # Junta todas as tabelas num comando só para evitar que as chaves estrangeiras bloquem a limpeza
         # O CASCADE diz ao postgres que se uma tabela C depende da tabela A, zere ambas sem gritar.
-        tabelas_formatadas = ", ".join([f"{schema_name}.{t}" for t in tabelas])
-        
-        query_truncate = f"TRUNCATE TABLE {tabelas_formatadas} CASCADE;"
+        tabelas_formatadas = sql.SQL(", ").join(
+            sql.SQL("{}.{}").format(
+                sql.Identifier(schema_name),
+                sql.Identifier(table_name),
+            )
+            for table_name in tabelas
+        )
+
+        query_truncate = sql.SQL("TRUNCATE TABLE {} CASCADE").format(
+            tabelas_formatadas
+        )
         cur.execute(query_truncate)
         
         print("\n[OK] SUCESSO! Todas as tabelas de destino (banco-destino) foram esvaziadas.")

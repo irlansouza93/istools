@@ -323,8 +323,12 @@ class EDGV300ShpToPostgisAlgorithm(QgsProcessingAlgorithm):
                 if output_mode == 1 and hasattr(writer, 'rollback'):
                     try:
                         writer.rollback()
-                    except Exception:
-                        pass
+                    except Exception as rollback_error:
+                        feedback.reportError(
+                            f"Falha ao desfazer a transação do arquivo "
+                            f"'{filename}': {rollback_error}",
+                            fatalError=False,
+                        )
                 
             file_results.append(file_info)
             feedback.setProgress(int((i + 1) * step))

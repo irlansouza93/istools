@@ -22,8 +22,8 @@
 """
 
 import os
-from qgis.PyQt.QtCore import QCoreApplication, QSettings, QTranslator
-from qgis.PyQt.QtGui import QIcon
+from qgis.PyQt.QtCore import QCoreApplication, QSettings, QTranslator, QUrl
+from qgis.PyQt.QtGui import QDesktopServices, QIcon
 from qgis.PyQt.QtWidgets import QAction, QMenu
 from qgis.core import QgsApplication, QgsProcessingRegistry
 from .extend_lines import ExtendLines
@@ -86,11 +86,18 @@ class ISTools:
 
         self.db_tools_menu = QMenu(self.tr("Ferramentas de Banco de Dados", "Ferramentas de Banco de Dados"))
         self.db_tools_menu.setIcon(QIcon(":/plugins/istools/icons/icon_db_tools_menu.png"))
+
+        self.external_tools_menu = QMenu(self.tr("External Tools", "Ferramentas Externas"))
+        self.external_tools_menu.setIcon(
+            QIcon(os.path.join(self.plugin_dir, "icons", "icon_tifftools.png"))
+        )
         
         self.menu.addMenu(self.vector_tools_menu)
         self.menu.addMenu(self.processing_tools_menu)
         self.menu.addSeparator()
         self.menu.addMenu(self.db_tools_menu)
+        self.menu.addSeparator()
+        self.menu.addMenu(self.external_tools_menu)
         
         # Create ISTools toolbar
         self.toolbar = self.iface.addToolBar("ISTools")
@@ -162,6 +169,7 @@ class ISTools:
         self._setup_server_config_tool()
         self._setup_database_manager_tool()
         self._setup_edgv300_etl_tool()
+        self._setup_external_tools()
 
         # Add top-level menu to QGIS
         menu_bar = self.iface.mainWindow().menuBar()
@@ -387,6 +395,29 @@ class ISTools:
         """
         import processing
         processing.execAlgorithmDialog("istools:shp_to_postgis_edgv300")
+
+    def _setup_external_tools(self):
+        """Adiciona atalhos para aplicativos distribuídos fora do plugin."""
+        action = QAction(
+            QIcon(os.path.join(self.plugin_dir, "icons", "icon_tifftools.png")),
+            self.tr(
+                "TiffTools Pro — download and user guide",
+                "TiffTools Pro — baixar e consultar manual",
+            ),
+            self.iface.mainWindow(),
+        )
+        action.setToolTip(self.tr(
+            "Opens the official page for the standalone TIFF compression and reprojection application",
+            "Abre a página oficial do aplicativo externo para compressão e reprojeção de TIFF",
+        ))
+        action.triggered.connect(
+            lambda: QDesktopServices.openUrl(QUrl(
+                "https://irlansouza93.github.io/istools-website/tifftools/"
+            ))
+        )
+
+        self.actions.append(action)
+        self.external_tools_menu.addAction(action)
 
     def _add_action_to_interface(self, action, target_menu=None):
         """

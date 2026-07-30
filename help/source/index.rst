@@ -1,7 +1,7 @@
 ISTools Plugin Documentation
 ============================
 
-Welcome to the documentation for **ISTools v1.5.1**, a professional geoinformation toolkit for QGIS.
+Welcome to the documentation for **ISTools v1.5.3**, a professional geoinformation toolkit for QGIS.
 
 Contents:
 
@@ -25,6 +25,7 @@ Vectorization
 - **Bounded Polygon Generator**: Create polygons respecting boundaries.
 - **Point on Surface**: Correct centroid positioning within features.
 - **Smooth Simplifier**: Reduce vertices in selected lines with a fine, undoable tolerance.
+- **TiffTools Pro (external application)**: Open the official download and user guide for the standalone TIFF compression and reprojection utility. The executable is not bundled with the plugin.
 
 Database Management
 -------------------

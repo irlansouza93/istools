@@ -6,9 +6,12 @@ Toda lógica de banco (conexão, queries) é delegada a database_manager_logic.p
 Este módulo cuida exclusivamente da camada de apresentação (PyQt/QGIS).
 """
 import os
-import subprocess
+# Necessário para pg_dump/psql; toda chamada passa por validate_postgres_command.
+import subprocess  # nosec B404
 import datetime
+from psycopg2 import sql
 from istools import database_manager_logic as logic
+from istools.subprocess_security import validate_postgres_command
 from qgis.PyQt.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QTabWidget, QWidget,
     QLabel, QComboBox, QPushButton, QFileDialog, QLineEdit,
@@ -132,9 +135,14 @@ class DatabaseManagerDialog(QDialog):
                     "O Backup e Restauração podem não funcionar.")
             else:
                 try:
-                    ver = subprocess.check_output([pg_dump, "--version"], 
+                    command = validate_postgres_command([pg_dump, "--version"])
+                    ver = subprocess.check_output(  # nosec B603
+                        command,
+                        shell=False,
                         universal_newlines=True, 
-                        creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0)
+                        creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0,
+                        timeout=10,
+                    )
                     QSettings().setValue("ISTools/postgis_bin_path", path)
                     QMessageBox.information(self, "Sucesso", 
                         f"Configuração salva!\nVersão detectada: {ver.strip()}")
@@ -332,7 +340,12 @@ class DatabaseManagerDialog(QDialog):
             conn = logic.get_db_connection(params, "postgres")
             conn.autocommit = True
             cur = conn.cursor()
-            cur.execute(f'CREATE DATABASE "{new_db}" TEMPLATE "{src_db}"')
+            cur.execute(
+                sql.SQL("CREATE DATABASE {} TEMPLATE {}").format(
+                    sql.Identifier(new_db),
+                    sql.Identifier(src_db),
+                )
+            )
             cur.close()
             conn.close()
             QMessageBox.information(self, "Sucesso",
@@ -613,7 +626,9 @@ class DatabaseManagerDialog(QDialog):
             cur = conn.cursor()
             for db in targets:
                 logic.terminate_db_sessions(params, db)
-                cur.execute(f'DROP DATABASE "{db}"')
+                cur.execute(
+                    sql.SQL("DROP DATABASE {}").format(sql.Identifier(db))
+                )
                 QgsMessageLog.logMessage(
                     f"Banco '{db}' excluído.", "ISTools", Qgis.Info)
             cur.close()
@@ -711,7 +726,9 @@ class DatabaseManagerDialog(QDialog):
             conn = logic.get_db_connection(params, "postgres")
             conn.autocommit = True
             cur = conn.cursor()
-            cur.execute(f'CREATE DATABASE "{new_db}"')
+            cur.execute(
+                sql.SQL("CREATE DATABASE {}").format(sql.Identifier(new_db))
+            )
             cur.close()
             conn.close()
         except Exception as e:
@@ -766,7 +783,7 @@ class DatabaseManagerDialog(QDialog):
         help_text = QTextEdit()
         help_text.setReadOnly(True)
         help_text.setHtml("""
-            <h3>Guia do Gerenciador de Banco — ISTools v1.5.1</h3>
+            <h3>Guia do Gerenciador de Banco — ISTools v1.5.3</h3>
             <p>Ferramenta para administração de bancos PostGIS com foco em projetos de Geoinformação.</p>
 
             <hr>
@@ -827,7 +844,12 @@ class DatabaseManagerDialog(QDialog):
     def run_db_task(self, description, cmd, env):
         self.progress_bar.setVisible(True)
         self.progress_bar.setRange(0, 0)
-        task = DatabaseOperationTask(description, cmd, env)
+        try:
+            task = DatabaseOperationTask(description, cmd, env)
+        except ValueError as error:
+            self.progress_bar.setVisible(False)
+            QMessageBox.critical(self, "Comando inválido", str(error))
+            return
         task.taskCompleted.connect(
             lambda: self.on_task_finished(description, True, task))
         task.taskTerminated.connect(
@@ -870,14 +892,16 @@ class DatabaseOperationTask(QgsTask):
     """Subprocesso (pg_dump/psql) sem travar UI."""
     def __init__(self, description, cmd, env):
         super().__init__(description, QgsTask.CanCancel)
-        self.cmd = cmd
+        self.cmd = validate_postgres_command(cmd)
         self.env = env
         self.error_msg = ""
 
     def run(self):
         try:
-            process = subprocess.Popen(
+            process = subprocess.Popen(  # nosec B603
                 self.cmd, env=self.env,
+                shell=False,
+                stdin=subprocess.DEVNULL,
                 stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                 universal_newlines=True,
                 creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0

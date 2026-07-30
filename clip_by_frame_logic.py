@@ -47,8 +47,12 @@ class ClipByFrameLogic:
         try:
             if not geom.isGeosValid():
                 return geom.makeValid()
-        except Exception:
-            pass
+        except Exception as error:
+            QgsMessageLog.logMessage(
+                f"Não foi possível validar a geometria antes do recorte: {error}",
+                "ISTools",
+                Qgis.Warning,
+            )
         return geom
 
     @staticmethod
@@ -67,8 +71,13 @@ class ClipByFrameLogic:
             ok = g.convertGeometryCollectionToSubclass(target_geom_type)
             if ok and not g.isNull() and not g.isEmpty():
                 return g
-        except Exception:
-            pass
+        except Exception as error:
+            QgsMessageLog.logMessage(
+                f"Falha ao extrair a coleção geométrica para o tipo da camada "
+                f"'{target_layer.name()}': {error}",
+                "ISTools",
+                Qgis.Warning,
+            )
 
         return g
 
@@ -82,9 +91,20 @@ class ClipByFrameLogic:
 
         if target_is_multi and not QgsWkbTypes.isMultiType(geom.wkbType()):
             try:
-                geom.convertToMultiType()
-            except Exception:
-                pass
+                if not geom.convertToMultiType():
+                    QgsMessageLog.logMessage(
+                        f"A geometria não pôde ser convertida para multipartes na "
+                        f"camada '{target_layer.name()}'.",
+                        "ISTools",
+                        Qgis.Warning,
+                    )
+            except Exception as error:
+                QgsMessageLog.logMessage(
+                    f"Falha ao converter a geometria para multipartes na camada "
+                    f"'{target_layer.name()}': {error}",
+                    "ISTools",
+                    Qgis.Warning,
+                )
 
         return geom
 

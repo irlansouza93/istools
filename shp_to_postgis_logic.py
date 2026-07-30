@@ -23,6 +23,7 @@
 
 import os
 import psycopg2
+from psycopg2 import sql
 from qgis.core import (
     QgsVectorLayer,
     QgsDataSourceUri,
@@ -62,7 +63,7 @@ class ShpToPostGISLogic:
             )
             conn.autocommit = True
             cur = conn.cursor()
-            cur.execute(f"SELECT 1 FROM pg_database WHERE datname = %s", (db_name,))
+            cur.execute("SELECT 1 FROM pg_database WHERE datname = %s", (db_name,))
             exists = cur.fetchone() is not None
             cur.close()
             conn.close()
@@ -89,11 +90,15 @@ class ShpToPostGISLogic:
             cur = conn.cursor()
             
             # Verifica se já existe
-            cur.execute(f"SELECT 1 FROM pg_database WHERE datname = %s", (new_db_name,))
+            cur.execute("SELECT 1 FROM pg_database WHERE datname = %s", (new_db_name,))
             exists = cur.fetchone()
             
             if not exists:
-                cur.execute(f'CREATE DATABASE "{new_db_name}"')
+                cur.execute(
+                    sql.SQL("CREATE DATABASE {}").format(
+                        sql.Identifier(new_db_name)
+                    )
+                )
                 QgsMessageLog.logMessage(f"Banco '{new_db_name}' criado com sucesso.", "ISTools", Qgis.Info)
             
             cur.close()

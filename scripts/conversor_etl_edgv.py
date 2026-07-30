@@ -486,7 +486,11 @@ class EDGVConverter:
                 password=self.db_params['password']
             )
             cur = conn.cursor()
-            cur.execute(f"SELECT table_name FROM information_schema.tables WHERE table_schema = '{self.schema_A}'")
+            cur.execute(
+                "SELECT table_name FROM information_schema.tables "
+                "WHERE table_schema = %s",
+                (self.schema_A,),
+            )
             tables = cur.fetchall()
             
             for (tname,) in tables:
@@ -539,13 +543,19 @@ try:
         iface.messageBar().pushMessage("Info", "Iniciando Conversor ETL EDGV...", level=Qgis.Info)
     
     converter = EDGVConverter(
-        json_path=r'c:\DESENVOLVIMENTO\dados-modelagens\conversao_pg-edgv-300_pg-edgv-300topo145.json',
-        pg_host='localhost',
-        pg_port=5432,
-        pg_db_source='banco-fonte',
-        pg_db_target='banco-destino',
-        pg_user='postgres',
-        pg_pass='postgres'
+        json_path=os.environ.get(
+            "ISTOOLS_MAPPING_PATH",
+            os.path.join(
+                os.path.dirname(__file__),
+                "conversao_pg-edgv-300_pg-edgv-300topo145.json",
+            ),
+        ),
+        pg_host=os.environ.get("PGHOST", "localhost"),
+        pg_port=int(os.environ.get("PGPORT", "5432")),
+        pg_db_source=os.environ.get("ISTOOLS_SOURCE_DB", "banco-fonte"),
+        pg_db_target=os.environ.get("ISTOOLS_TARGET_DB", "banco-destino"),
+        pg_user=os.environ.get("PGUSER", "postgres"),
+        pg_pass=os.environ.get("PGPASSWORD", ""),
     )
     # Inicia o ETL lendo todas as classes!
     converter.run_etl()

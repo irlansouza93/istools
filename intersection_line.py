@@ -20,7 +20,8 @@ from qgis.PyQt.QtCore import Qt, QTimer
 from qgis.PyQt.QtWidgets import QMessageBox
 from qgis.core import (
     QgsProject, QgsFeatureRequest, QgsGeometry, QgsRectangle, QgsPointXY,
-    QgsWkbTypes, QgsSpatialIndex, QgsCoordinateTransform, Qgis, QgsApplication
+    QgsWkbTypes, QgsSpatialIndex, QgsCoordinateTransform, QgsCsException,
+    QgsMessageLog, Qgis, QgsApplication
 )
 from qgis.gui import QgsMapTool, QgsRubberBand
 from .translations.translate import translate
@@ -135,10 +136,8 @@ class IntersectionLineTool:
 
     def _cleanup_map_tool(self):
         if self.map_tool:
-            try:
+            if self.canvas.mapTool() is self.map_tool:
                 self.canvas.unsetMapTool(self.map_tool)
-            except Exception:
-                pass
             self.map_tool = None
         self._hint_shown = False
 
@@ -176,8 +175,13 @@ class IntersectionLineTool:
             try:
                 for p in inter_geom.asGeometryCollection():
                     pts.extend(self._collect_points_from_intersection(p))
-            except Exception:
-                pass
+            except Exception as error:
+                QgsMessageLog.logMessage(
+                    f"Falha ao decompor uma coleção de geometrias de "
+                    f"interseção: {error}",
+                    "ISTools",
+                    Qgis.Warning,
+                )
             return pts
 
         return pts
@@ -229,9 +233,49 @@ class IntersectionLineTool:
     def _layer_transforms(self, layer):
         """Return (to_proj, from_proj) transforms for layer <-> project CRS."""
         lcrs = layer.crs()
-        to_proj = QgsCoordinateTransform(lcrs, self.canvas.mapSettings().destinationCrs(), self.tctx)
-        from_proj = QgsCoordinateTransform(self.canvas.mapSettings().destinationCrs(), lcrs, self.tctx)
+        project_crs = self.canvas.mapSettings().destinationCrs()
+        if not lcrs.isValid() or not project_crs.isValid():
+            QgsMessageLog.logMessage(
+                f"A camada '{layer.name()}' foi ignorada porque seu CRS ou o CRS "
+                "do projeto é inválido.",
+                "ISTools",
+                Qgis.Warning,
+            )
+            return None, None
+
+        to_proj = QgsCoordinateTransform(lcrs, project_crs, self.tctx)
+        from_proj = QgsCoordinateTransform(project_crs, lcrs, self.tctx)
+        if not to_proj.isValid() or not from_proj.isValid():
+            QgsMessageLog.logMessage(
+                f"A camada '{layer.name()}' foi ignorada porque a transformação "
+                "de coordenadas não pôde ser construída.",
+                "ISTools",
+                Qgis.Warning,
+            )
+            return None, None
         return to_proj, from_proj
+
+    @staticmethod
+    def _transform_point_safely(coordinate_transform, point, layer_name):
+        """Transforma um ponto ou retorna ``None`` quando a reprojeção falhar."""
+        if coordinate_transform is None or not coordinate_transform.isValid():
+            QgsMessageLog.logMessage(
+                f"Transformação de coordenadas inválida para a camada "
+                f"'{layer_name}'.",
+                "ISTools",
+                Qgis.Warning,
+            )
+            return None
+        try:
+            return coordinate_transform.transform(point)
+        except QgsCsException as error:
+            QgsMessageLog.logMessage(
+                f"Falha ao reprojetar um ponto de interseção para a camada "
+                f"'{layer_name}': {error}",
+                "ISTools",
+                Qgis.Warning,
+            )
+            return None
 
     def _tol_in_layer_units(self, from_proj: QgsCoordinateTransform, tol_proj: float, ref_pt_proj: QgsPointXY):
         """Convert project tolerance into layer CRS units near ref point."""
@@ -242,7 +286,13 @@ class IntersectionLineTool:
             dy = p2.y() - p1.y()
             d = (dx*dx + dy*dy) ** 0.5
             return d if d > 0 else tol_proj
-        except Exception:
+        except QgsCsException as error:
+            QgsMessageLog.logMessage(
+                f"Não foi possível converter a tolerância para as unidades da "
+                f"camada: {error}",
+                "ISTools",
+                Qgis.Warning,
+            )
             return tol_proj
 
     def _layer_is_visible(self, layer):
@@ -283,6 +333,8 @@ class IntersectionLineTool:
                 and self._layer_is_visible(lyr)):
                 index = QgsSpatialIndex(lyr.getFeatures())
                 to_proj, from_proj = self._layer_transforms(lyr)
+                if to_proj is None or from_proj is None:
+                    continue
                 line_layers.append({
                     'layer': lyr, 'index': index,
                     'to_proj': to_proj, 'from_proj': from_proj,
@@ -363,23 +415,22 @@ class IntersectionLineTool:
                                 continue
                             seen.add(key)
 
-                            # Insert on A
-                            ptA = QgsPointXY(pt)
-                            try:
-                                ptA = fromA.transform(ptA)
-                            except Exception:
-                                pass
+                            ptA = self._transform_point_safely(
+                                fromA, QgsPointXY(pt), lyrA.name()
+                            )
+                            ptB = self._transform_point_safely(
+                                fromB, QgsPointXY(pt), lyrB.name()
+                            )
+                            if ptA is None or ptB is None:
+                                continue
+
+                            # As duas reprojeções precisam ser válidas para manter
+                            # o vértice compartilhado nas duas camadas.
                             newA = self._insert_vertex_precisely(gA_layer, ptA, tolA)
                             if newA and self._ensure_edit_command(A) and lyrA.changeGeometry(fidA, newA):
                                 gA_layer = newA
                                 created_count += 1
 
-                            # Insert on B
-                            ptB = QgsPointXY(pt)
-                            try:
-                                ptB = fromB.transform(ptB)
-                            except Exception:
-                                pass
                             newB = self._insert_vertex_precisely(gB_layer, ptB, tolB)
                             if newB and self._ensure_edit_command(B) and lyrB.changeGeometry(fidB, newB):
                                 gB_layer = newB

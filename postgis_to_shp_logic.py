@@ -22,6 +22,7 @@
 """
 
 import os
+from contextlib import closing
 import psycopg2
 from qgis.core import (
     QgsVectorLayer,
@@ -77,26 +78,36 @@ class PostGISToShpLogic:
         """Busca o nome original da tabela na tabela de metadados."""
         original_name = table_name
         try:
-            conn = psycopg2.connect(
+            with closing(psycopg2.connect(
                 dbname=server_params["dbname"],
                 user=server_params["user"],
                 password=server_params["password"],
                 host=server_params["host"],
-                port=server_params["port"]
+                port=server_params["port"],
+            )) as conn:
+                with conn.cursor() as cur:
+                    cur.execute(
+                        "SELECT original_name FROM public.istools_metadata "
+                        "WHERE sanitized_name = %s",
+                        (table_name,),
+                    )
+                    row = cur.fetchone()
+                    if row:
+                        original_name = row[0]
+        except psycopg2.errors.UndefinedTable:
+            QgsMessageLog.logMessage(
+                "A tabela public.istools_metadata não existe; será mantido o "
+                f"nome atual '{table_name}'.",
+                "ISTools",
+                Qgis.Info,
             )
-            cur = conn.cursor()
-            
-            # Tenta buscar na tabela de metadados
-            cur.execute("SELECT original_name FROM public.istools_metadata WHERE sanitized_name = %s", (table_name,))
-            row = cur.fetchone()
-            if row:
-                original_name = row[0]
-                
-            cur.close()
-            conn.close()
-        except Exception:
-            # Se a tabela não existir, apenas retorna o nome atual (fallback)
-            pass
+        except psycopg2.Error as error:
+            QgsMessageLog.logMessage(
+                f"Não foi possível consultar o nome original de "
+                f"'{schema_name}.{table_name}': {error}",
+                "ISTools",
+                Qgis.Warning,
+            )
         return original_name
 
     @staticmethod

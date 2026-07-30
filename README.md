@@ -15,7 +15,7 @@
 </div>
 
 [![Versão QGIS](https://img.shields.io/badge/QGIS-3.10+-brightgreen.svg)](https://qgis.org)
-[![Versão](https://img.shields.io/badge/Versão-1.5.1-blue.svg)](https://github.com/irlansouza93/istools)
+[![Versão](https://img.shields.io/badge/Versão-1.5.3-blue.svg)](https://github.com/irlansouza93/istools)
 [![Licença](https://img.shields.io/badge/Licença-GPL--3.0-red.svg)](LICENSE)
 [![Linguagem](https://img.shields.io/badge/Linguagem-Python-yellow.svg)](https://python.org)
 
@@ -49,6 +49,9 @@ Ferramentas ágeis para manipulação de geometrias:
 
 ### ⚡ Pipelines de Processamento (ETL)
 - **🏗️ ETL EDGV 3.0**: Módulo especializado para converter bases legadas para o padrão EDGV 3.0 (Especificação de Dados Geoespaciais Vetoriais do Exército Brasileiro).
+
+### 🛰️ Aplicativos externos
+- **[TiffTools Pro](https://irlansouza93.github.io/istools-website/tifftools/)**: Aplicativo Windows independente para comprimir e reprojetar arquivos TIFF com o GDAL do QGIS. Foi projetado para facilitar o trabalho com imagens muito pesadas, inclusive em computadores com memória limitada. O executável não faz parte do ZIP do plugin; o ISTools oferece somente um atalho para a página oficial de download e manual.
 
 ---
 

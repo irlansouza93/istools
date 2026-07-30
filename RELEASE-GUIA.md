@@ -1,10 +1,10 @@
-# 🚀 Guia de Release - ISTools v1.5.1
+# 🚀 Guia de Release - ISTools v1.5.3
 
 Este documento descreve o processo oficial de preparação, teste e publicação de uma nova versão do plugin ISTools.
 
 ## 1. Verificações de Pré-venda
 Antes de gerar o pacote final, confirme:
-- [ ] O `version` no `metadata.txt` está correto (ex: `1.5.1`).
+- [ ] O `version` no `metadata.txt` está correto (ex: `1.5.3`).
 - [ ] O posto do autor está atualizado como `2° Sgt`.
 - [ ] O `changelog` no `metadata.txt` reflete todas as melhorias da versão.
 - [ ] Os ícones novos foram adicionados em `resources.qrc`.
@@ -39,7 +39,7 @@ Antes de subir para o repositório oficial, instale o ZIP gerado em uma instânc
 ## 5. Publicação
 1. **GitHub:**
    - Faça commit de todas as alterações (incluindo diretório `scripts/`).
-   - Crie uma Tag `v1.5.1`.
+   - Crie uma Tag `v1.5.3`.
    - Crie uma Release anexando o arquivo ZIP gerado.
 2. **QGIS Plugin Repository:**
    - Acesse [plugins.qgis.org](https://plugins.qgis.org/).

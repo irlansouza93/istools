@@ -22,6 +22,7 @@
 """
 from pathlib import Path
 import psycopg2
+from psycopg2 import sql
 from qgis.PyQt.QtCore import QSettings
 from qgis.core import QgsMessageLog, Qgis
 
@@ -159,7 +160,7 @@ def create_database(params, db_name, allow_existing=False):
         conn.close()
         raise ValueError(f"O banco '{db_name}' j? existe.")
     if not exists:
-        cur.execute(f'CREATE DATABASE "{db_name}"')
+        cur.execute(sql.SQL("CREATE DATABASE {}").format(sql.Identifier(db_name)))
     cur.close()
     conn.close()
 
@@ -172,9 +173,9 @@ def drop_database(params, db_name, if_exists=True):
     conn.autocommit = True
     cur = conn.cursor()
     if if_exists:
-        cur.execute(f'DROP DATABASE IF EXISTS "{db_name}"')
+        cur.execute(sql.SQL("DROP DATABASE IF EXISTS {}").format(sql.Identifier(db_name)))
     else:
-        cur.execute(f'DROP DATABASE "{db_name}"')
+        cur.execute(sql.SQL("DROP DATABASE {}").format(sql.Identifier(db_name)))
     cur.close()
     conn.close()
 
@@ -213,8 +214,13 @@ def create_topo_database(conn_name, db_name, allow_existing=False):
         execute_sql_file(params, db_name, sql_path)
     try:
         refresh_server_databases(conn_name)
-    except Exception:
-        pass
+    except Exception as error:
+        QgsMessageLog.logMessage(
+            f"O banco '{db_name}' foi criado, mas a lista do servidor "
+            f"'{conn_name}' não pôde ser atualizada: {error}",
+            "ISTools",
+            Qgis.Warning,
+        )
     return get_server_connection_params(conn_name, db_name)
 
 
@@ -317,8 +323,18 @@ def reset_schema_data(params, db_name, schema_name, mode="all"):
         conn.close()
         return 0
 
-    tables_str = ", ".join([f'"{schema_name}"."{t}"' for t in tables])
-    cur.execute(f"TRUNCATE TABLE {tables_str} RESTART IDENTITY CASCADE;")
+    qualified_tables = [
+        sql.SQL("{}.{}").format(
+            sql.Identifier(schema_name),
+            sql.Identifier(table_name),
+        )
+        for table_name in tables
+    ]
+    cur.execute(
+        sql.SQL("TRUNCATE TABLE {} RESTART IDENTITY CASCADE").format(
+            sql.SQL(", ").join(qualified_tables)
+        )
+    )
 
     cur.close()
     conn.close()
@@ -514,13 +530,25 @@ def fix_sequences(params, db_name, tables):
             res = cur.fetchone()
             if res:
                 col_name = res[0]
-                cur.execute(f'SELECT MAX("{col_name}") FROM "{schema}"."{table}"')
+                cur.execute(
+                    sql.SQL("SELECT MAX({}) FROM {}.{}").format(
+                        sql.Identifier(col_name),
+                        sql.Identifier(schema),
+                        sql.Identifier(table),
+                    )
+                )
                 max_id = cur.fetchone()[0]
                 if max_id:
                     seq_name = res[1].split("'")[1]
                     cur.execute("SELECT setval(%s, %s)", (seq_name, max_id))
                     count += 1
-        except Exception:
+        except Exception as error:
+            QgsMessageLog.logMessage(
+                f"Não foi possível ajustar a sequência de "
+                f"'{schema}.{table}': {error}",
+                "ISTools",
+                Qgis.Warning,
+            )
             continue
     cur.close()
     conn.close()
@@ -565,7 +593,12 @@ def merge_databases(params, source_dbs, target_db, progress_callback=None):
         conn_admin = get_db_connection(params, "postgres")
         conn_admin.autocommit = True
         cur_admin = conn_admin.cursor()
-        cur_admin.execute(f'CREATE DATABASE "{target_db}" TEMPLATE "{source_dbs[0]}"')
+        cur_admin.execute(
+            sql.SQL("CREATE DATABASE {} TEMPLATE {}").format(
+                sql.Identifier(target_db),
+                sql.Identifier(source_dbs[0]),
+            )
+        )
         cur_admin.close()
         conn_admin.close()
         log("Estrutura base criada.", "ok")
@@ -591,7 +624,12 @@ def merge_databases(params, source_dbs, target_db, progress_callback=None):
         # 3. Limpar dados do clone
         log(f"Limpando dados ({len(tables)} tabelas)...")
         for schema, table in tables:
-            cur_target.execute(f'TRUNCATE TABLE "{schema}"."{table}" RESTART IDENTITY CASCADE')
+            cur_target.execute(
+                sql.SQL("TRUNCATE TABLE {}.{} RESTART IDENTITY CASCADE").format(
+                    sql.Identifier(schema),
+                    sql.Identifier(table),
+                )
+            )
 
         # 4. Copiar dados de cada banco
         for i, src_name in enumerate(source_dbs):
@@ -615,7 +653,12 @@ def merge_databases(params, source_dbs, target_db, progress_callback=None):
                     """, (schema, table))
                     serial_cols = {r[0] for r in cur_target.fetchall()}
 
-                    cur_src.execute(f'SELECT * FROM "{schema}"."{table}"')
+                    cur_src.execute(
+                        sql.SQL("SELECT * FROM {}.{}").format(
+                            sql.Identifier(schema),
+                            sql.Identifier(table),
+                        )
+                    )
                     all_cols = [d[0] for d in cur_src.description]
                     rows = cur_src.fetchall()
                     if not rows:
@@ -625,12 +668,17 @@ def merge_databases(params, source_dbs, target_db, progress_callback=None):
                     col_idx = [all_cols.index(c) for c in target_cols]
                     final_rows = [tuple(r[i] for i in col_idx) for r in rows]
 
-                    cols_str = ", ".join([f'"{c}"' for c in target_cols])
-                    ph = ", ".join(["%s"] * len(target_cols))
-                    cur_target.executemany(
-                        f'INSERT INTO "{schema}"."{table}" ({cols_str}) VALUES ({ph})',
-                        final_rows
+                    insert_query = sql.SQL(
+                        "INSERT INTO {}.{} ({}) VALUES ({})"
+                    ).format(
+                        sql.Identifier(schema),
+                        sql.Identifier(table),
+                        sql.SQL(", ").join(map(sql.Identifier, target_cols)),
+                        sql.SQL(", ").join(
+                            sql.Placeholder() for _ in target_cols
+                        ),
                     )
+                    cur_target.executemany(insert_query, final_rows)
                     result["detail"].append((f"{schema}.{table}", src_name, len(rows)))
                 except Exception as e:
                     msg = f"Erro em {schema}.{table} ({src_name}): {e}"

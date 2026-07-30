@@ -8,20 +8,13 @@ qgisMinimumVersion=3.24
 qgisMaximumVersion=3.99
 
 # Plugin description
-description=Solução de geoinformação completa para QGIS: Vetorização, PostGIS e ETL EDGV 3.0. / Complete Geoinformation suite for QGIS: Vectorization, PostGIS and EDGV 3.0 ETL.
-about=O **ISTools** evoluiu de um conjunto de ferramentas de vetorização para uma **Suíte de Geoinformação completa**. Focado em produtividade máxima, ele integra ferramentas de desenho técnico, gerenciamento de banco de dados e fluxos de processamento inteligentes.
+description=Ferramentas integradas para edição vetorial, topologia, PostGIS e fluxos EDGV no QGIS.
+about=O ISTools reúne ferramentas de edição e validação geométrica, manutenção topológica, geoprocessamento multicamadas e administração de bancos PostGIS.
 
-    **🛠️ Ferramentas de Vetorização / Vectorization Tools:**
-
-    **🗄️ Gerenciamento de Dados / Data Management:**
-    • **Gerenciador PostGIS**: Ferramentas avançadas para SQL e manutenção de banco / Advanced SQL and DB maintenance.
-    • **Carregar Banco Shape**: Importação em massa de arquivos SHP diretamente para o banco / Batch SHP to DB import.
-    • **ETL EDGV 3.0**: Pipeline especializado para conversão de dados no padrão EDGV 3.0 para PostGIS / Professional EDGV 3.0 to PostGIS ETL.
-
-    **🎯 Ideal para / Perfect for:** Cartógrafos, Analistas GIS, Topógrafos e Administradores de Banco de Dados / Cartographers, GIS analysts, surveyors, and DBAs.
+    Inclui extensão e simplificação de linhas, geração de polígonos e pontos internos, inserção de vértices em interseções, recorte por moldura, carregamento de bases, rotinas ETL EDGV 3.0 e conversão para EDGV Topo 1.4.5.
 
 # Version and authorship
-version=1.5.1
+version=1.5.3
 author=Irlan Souza, 2° Sgt Brazilian Army
 email=irlansouza193@gmail.com
 
@@ -44,9 +37,22 @@ server=False
 hasProcessingProvider=True
 
 # Version history
-changelog=🚀 **Version 1.5.1**
+changelog=🛰️ **Version 1.5.3**
+    • **TiffTools Pro**: Novo atalho em Ferramentas Externas para a página oficial de download e documentação do aplicativo independente.
+    • **Distribuição separada**: O executável não integra o pacote do plugin; o ISTools apenas direciona o usuário ao site oficial.
+    • **Documentação**: Manual não técnico com configuração do QGIS, compressão, reprojeção, boas práticas e solução de problemas.
+
+    🛡️ **Version 1.5.2**
+    • **Conformidade do pacote**: ZIP reconstruído com caminhos POSIX, estrutura única `istools/` e validação de integridade para publicação no repositório oficial do QGIS.
+    • **Segurança**: Consultas SQL dinâmicas protegidas, credenciais fixas removidas e chamadas de subprocessos validadas.
+    • **Robustez**: Falhas de geometria, CRS, conexão e rollback agora são registradas no painel de mensagens do QGIS.
+    • **Ferramentas**: Mantém o Simplificador Suave e o escopo seguro de edição da ferramenta de interseções.
+
+    🚀 **Version 1.5.1**
     • **Simplificador Suave**: Nova ferramenta para simplificar linhas selecionadas com tolerância fina e operação reversível.
     • **Interseção de Linhas**: A edição agora é iniciada somente nas camadas que recebem vértices.
+    • **Segurança**: Consultas SQL dinâmicas protegidas, subprocessos validados e utilitários de desenvolvimento removidos do pacote.
+    • **Diagnóstico**: Falhas de geometria, CRS, conexão e rollback agora são registradas no QGIS em vez de serem ignoradas.
 
     🚀 **Version 1.5.0** (Lançamento da Suite de Geoinformação)
     • **Expansão para Suite**: Agora integra gerenciamento PostGIS e ferramentas de ETL EDGV 3.0
